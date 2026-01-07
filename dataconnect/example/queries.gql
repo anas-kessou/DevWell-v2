@@ -1,0 +1,33 @@
+mutation CreateUser($displayName: String!, $email: String!) @auth(level: USER) {
+  user_insert(data: {displayName: $displayName, email: $email, createdAt_expr: "request.time"})
+}
+
+query GetMetrics @auth(level: USER) {
+  metrics {
+    id
+    name
+    description
+    unit
+    idealRangeMin
+    idealRangeMax
+  }
+}
+
+mutation CreateReading($metricId: UUID!, $value: Float!, $context: String) @auth(level: USER) {
+  reading_insert(data: {metricId: $metricId, userId_expr: "auth.uid", value: $value, timestamp_expr: "request.time", context: $context})
+}
+
+query GetRecommendations @auth(level: USER) {
+  recommendations {
+    id
+    triggerMetric {
+      id
+      name
+    }
+    content
+    type
+    intensity
+    duration
+    externalLink
+  }
+}

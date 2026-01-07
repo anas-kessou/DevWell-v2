@@ -1,0 +1,45 @@
+type User @table {
+  email: String!
+  displayName: String!
+  createdAt: Timestamp!
+  photoUrl: String
+  lastLogin: Timestamp
+}
+
+type Metric @table {
+  name: String!
+  unit: String!
+  type: String!
+  createdAt: Timestamp!
+  description: String
+  idealRangeMin: Float
+  idealRangeMax: Float
+}
+
+type Reading @table {
+  user: User!
+  metric: Metric!
+  value: Float!
+  timestamp: Timestamp!
+  context: String
+}
+
+type Recommendation @table {
+  type: String!
+  content: String!
+  triggerMetric: Metric!
+  createdAt: Timestamp!
+  duration: Int
+  intensity: String
+  externalLink: String
+}
+
+type Session @table {
+  user: User!
+  startTime: Timestamp!
+  endTime: Timestamp!
+  status: String!
+  createdAt: Timestamp!
+  notes: String
+  totalAlertsIssued: Int
+}

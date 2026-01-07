@@ -1,0 +1,8 @@
+{
+  "name": "DevWell",
+  "description": "An AI-powered developer wellness monitoring application using multimodal (Vision + Audio) analysis to prevent burnout.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}

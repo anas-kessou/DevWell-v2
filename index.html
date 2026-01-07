@@ -1,0 +1,84 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DevWell - Neural Wellness AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      body { font-family: 'Inter', sans-serif; }
+      .gradient-bg {
+        background: radial-gradient(circle at top right, #1e293b, #0f172a);
+      }
+      .glass-card {
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      
+      @keyframes neural-pulse {
+        0%, 100% { filter: drop-shadow(0 0 5px rgba(59, 130, 246, 0.5)); }
+        50% { filter: drop-shadow(0 0 20px rgba(59, 130, 246, 0.8)); }
+      }
+
+      @keyframes wave-flow {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+      }
+
+      .neural-glow {
+        animation: neural-pulse 3s infinite ease-in-out;
+      }
+
+      .wave-container {
+        overflow: hidden;
+        position: relative;
+      }
+
+      .wave-bar {
+        position: absolute;
+        height: 100%;
+        width: 100%;
+        background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.2), transparent);
+        animation: wave-flow 2s infinite linear;
+      }
+
+      @keyframes stress-pulse {
+        0%, 100% { box-shadow: 0 0 20px 5px rgba(239, 68, 68, 0.2) inset; border-color: rgba(239, 68, 68, 0.3); }
+        50% { box-shadow: 0 0 60px 25px rgba(239, 68, 68, 0.4) inset; border-color: rgba(239, 68, 68, 0.8); }
+      }
+      
+      .animate-stress { animation: stress-pulse 2s infinite ease-in-out; }
+
+      ::-webkit-scrollbar { width: 6px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@19.0.0",
+    "react-dom": "https://esm.sh/react-dom@19.0.0",
+    "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
+    "react-router-dom": "https://esm.sh/react-router-dom@7.1.1",
+    "@google/genai": "https://esm.sh/@google/genai@1.34.0",
+    "lucide-react": "https://esm.sh/lucide-react@0.462.0",
+    "recharts": "https://esm.sh/recharts@2.15.0",
+    "firebase/app": "https://esm.sh/firebase@11.3.1/app",
+    "firebase/firestore": "https://esm.sh/firebase@11.3.1/firestore",
+    "firebase/auth": "https://esm.sh/firebase@11.3.1/auth",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "firebase/": "https://esm.sh/firebase@^12.7.0/"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-slate-950 text-slate-100 overflow-x-hidden">
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
