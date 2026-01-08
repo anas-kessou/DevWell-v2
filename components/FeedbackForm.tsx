@@ -1,15 +1,22 @@
 
 import React, { useState } from 'react';
 import { Star, CheckCircle2 } from 'lucide-react';
+import { FirebaseService } from '../services/firebaseService';
 
 const FeedbackForm: React.FC = () => {
   const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [hover, setHover] = useState(0);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const user = FirebaseService.currentUser;
+    await FirebaseService.saveFeedback(user ? user.uid : null, rating, comment);
+    
     setSubmitted(true);
+    setRating(0);
+    setComment('');
     setTimeout(() => setSubmitted(false), 5000);
   };
 
@@ -46,6 +53,8 @@ const FeedbackForm: React.FC = () => {
           </div>
           <textarea 
             placeholder="Any comments?"
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
             className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl p-3 text-xs min-h-[80px] focus:ring-2 focus:ring-blue-500"
           />
           <button 

@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   ShieldCheck, Users, Activity, MessageCircle, Zap, TrendingUp, AlertTriangle, 
   Terminal, BarChart3, ChevronLeft, Globe, Database, BrainCircuit, RefreshCcw,
-  Lock, EyeOff, Download, ShieldAlert, CheckCircle, Info, Filter, Brain
+  Lock, EyeOff, Download, ShieldAlert, CheckCircle, Info, Filter, Brain, Key
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { 
@@ -11,70 +11,193 @@ import {
   AreaChart, Area, CartesianGrid, Legend 
 } from 'recharts';
 import { GeminiService } from '../services/geminiService';
+import { FirebaseService } from '../services/firebaseService';
 
 const AdminAnalytics: React.FC = () => {
+  const [isAdminAuth, setIsAdminAuth] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [authError, setAuthError] = useState('');
+
   const [loading, setLoading] = useState(true);
   const [insights, setInsights] = useState<any>(null);
   const [audit, setAudit] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('metrics');
   const [noiseEnabled, setNoiseEnabled] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [realExStats, setRealStats] = useState({
+    totalUsers: 0,
+    totalFeedback: 0,
+    totalTickets: 0,
+    totalEvents: 0,
+    activeUplinks: 0
+  });
+  const [trendData, setTrendData] = useState<any[]>([]);
+  const [recentEvents, setRecentEvents] = useState<any[]>([]);
+  const [recentFeedback, setRecentFeedback] = useState<string[]>([]);
 
-  // Simulated Global Data
-  const globalData = useMemo(() => ({
-    totalUsers: 1284,
-    activeUplinks: 432,
-    avgWellness: 84.5,
-    totalAlerts: 15920,
-    commonIssues: { posture: 4500, fatigue: 6200, stress: 3200, focus: 2020 },
-    recentFeedback: [
-      "The eye tracking saved me from a migraine today.",
-      "Posture alerts are a bit too sensitive on low mode.",
-      "Loving the ADHD mode, it keeps me focused.",
-      "Can we get more stretch routines in the Oracle?",
-      "The voice synthesis is surprisingly soothing."
-    ]
-  }), []);
+  const globalData = {
+    ...realExStats,
+    avgWellness: 84.5, // Computed from events if possible, or kept as placeholder
+    recentFeedback: recentFeedback.length > 0 ? recentFeedback : ["No recent feedback fetched."]
+  };
+
+  const handleAdminLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwordInput === 'vji4ayanas7cf8') {
+      setIsAdminAuth(true);
+      fetchRealData();
+    } else {
+      setAuthError('Access Denied: Invalid Security Token');
+      setPasswordInput('');
+    }
+  };
+
+  const fetchRealData = async () => {
+    setLoading(true);
+    
+    // 1. Fetch Counts
+    const stats = await FirebaseService.getGlobalStats();
+    setRealStats(stats);
+    
+    // 2. Fetch Lists (Events & Feedback)
+    const [events, feedback] = await Promise.all([
+      FirebaseService.getRecentGlobalEvents(200),
+      FirebaseService.getRecentFeedback(10)
+    ]);
+
+    setRecentEvents(events);
+    setRecentFeedback(feedback);
+
+    // 3. Process Events for Charts
+    processTrends(events);
+
+    setLoading(false); 
+    
+    // Fetch AI insights in background
+    try {
+      const [res, auditRes] = await Promise.all([
+         GeminiService.getSystemInsights([
+           "App is great", "Need more features", "Bugs in login"
+         ], stats.totalEvents),
+         GeminiService.auditAnonymity({ posture: stats.totalEvents })
+      ]);
+      setInsights(res);
+      setAudit(auditRes);
+    } catch (e) {
+      console.error("AI Insights Error:", e);
+    }
+  };
+
+  const processTrends = (events: any[]) => {
+    // Helper to get day name
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    
+    // Initialize last 7 days map
+    const last7Days = new Map();
+    for(let i=6; i>=0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dayName = days[d.getDay()];
+      last7Days.set(dayName, { day: dayName, alerts: 0, wellness: 0, stress: 0, count: 0 });
+    }
+
+    // Bucket events
+    events.forEach(ev => {
+      const date = new Date(ev.timestamp);
+      // Simple check if within last 7 days approx (ignoring exact time boundary for chart simplicity)
+      const dayName = days[date.getDay()];
+      if (last7Days.has(dayName)) {
+         const bucket = last7Days.get(dayName);
+         bucket.count++;
+         bucket.alerts++; // Assuming every event is an "alert" or significant event for this chart
+         // Simulate extracting stress/wellness from severity/type if actual numbers aren't in payload
+         // In real app, we extract `ev.data.wellnessScore` ect.
+         bucket.stress += (ev.severity === 'HIGH' ? 80 : ev.severity === 'MEDIUM' ? 50 : 20);
+         bucket.wellness += (ev.type === 'SUCCESS' ? 90 : 70); 
+      }
+    });
+
+    // Average out and format
+    const processed = Array.from(last7Days.values()).map(d => ({
+       day: d.day,
+       alerts: d.alerts,
+       stress: d.count > 0 ? Math.round(d.stress / d.count) : 0, 
+       wellness: d.count > 0 ? Math.round(d.wellness / d.count) : 0
+    }));
+
+    setTrendData(processed);
+  };
+
+
+  // Login Screen
+  if (!isAdminAuth) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center p-6">
+        <div className="max-w-md w-full glass-card p-8 rounded-3xl border border-white/10 relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-32 bg-cyan-500/10 blur-[100px] rounded-full" />
+          
+          <div className="relative z-10 space-y-8">
+            <div className="flex justify-center mb-8">
+              <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center border border-white/10">
+                <Lock className="text-cyan-400" size={32} />
+              </div>
+            </div>
+            
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Admin Restricted</h2>
+              <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">Enter security token to proceed</p>
+            </div>
+
+            <form onSubmit={handleAdminLogin} className="space-y-4">
+              <div className="space-y-2">
+                <div className="relative">
+                  <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+                  <input 
+                    type="password"
+                    value={passwordInput}
+                    onChange={(e) => setPasswordInput(e.target.value)}
+                    className="w-full bg-black/50 border border-white/10 rounded-xl px-12 py-4 text-white placeholder:text-slate-700 focus:outline-none focus:border-cyan-500/50 transition-all font-mono text-sm"
+                    placeholder="••••••••••••••"
+                  />
+                </div>
+                {authError && (
+                  <div className="flex items-center gap-2 text-red-500 text-[10px] font-bold uppercase tracking-widest animate-pulse">
+                    <ShieldAlert size={12} />
+                    {authError}
+                  </div>
+                )}
+              </div>
+              <button 
+                type="submit"
+                className="w-full bg-cyan-600 hover:bg-cyan-500 text-white py-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-95"
+              >
+                Authenticate
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Multi-layered Trend Data
-  const trendData = useMemo(() => {
-    const base = [
-      { day: 'Mon', alerts: 1200, wellness: 82, stress: 45 },
-      { day: 'Tue', alerts: 1450, wellness: 78, stress: 55 },
-      { day: 'Wed', alerts: 1900, wellness: 72, stress: 70 },
-      { day: 'Thu', alerts: 1550, wellness: 80, stress: 50 },
-      { day: 'Fri', alerts: 2100, wellness: 68, stress: 85 },
-      { day: 'Sat', alerts: 800, wellness: 92, stress: 25 },
-      { day: 'Sun', alerts: 650, wellness: 95, stress: 15 }
-    ];
-
-    if (!noiseEnabled) return base;
-    return base.map(d => ({
-      ...d,
-      alerts: d.alerts + (Math.random() * 100 - 50),
-      wellness: d.wellness + (Math.random() * 4 - 2)
-    }));
-  }, [noiseEnabled]);
-
+  // const trendData... -> Moved to top
+  
   const alertTrendData = [
     { hour: '00:00', alerts: 120 }, { hour: '04:00', alerts: 80 },
     { hour: '08:00', alerts: 350 }, { hour: '12:00', alerts: 980 },
     { hour: '16:00', alerts: 1420 }, { hour: '20:00', alerts: 600 }
   ];
 
+  /* 
+  // Hooks now at the top
   useEffect(() => {
     const fetchInsights = async () => {
-      setLoading(true);
-      const [res, auditRes] = await Promise.all([
-        GeminiService.getSystemInsights(globalData.recentFeedback, globalData.totalAlerts),
-        GeminiService.auditAnonymity(globalData.commonIssues)
-      ]);
-      setInsights(res);
-      setAudit(auditRes);
-      setLoading(false);
+      // Logic moved to handleAdminLogin
     };
-    fetchInsights();
-  }, [globalData]);
+    // fetchInsights(); // Disabled auto-fetch
+  }, [globalData]); 
+  */
 
   const handleExportJSONL = () => {
     setExporting(true);
@@ -185,11 +308,12 @@ const AdminAnalytics: React.FC = () => {
           {activeTab === 'metrics' && (
             <div className="animate-in slide-in-from-right-10 duration-500 space-y-8">
               {/* KPI Matrix */}
-              <div className="grid grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
                 {[
-                  { label: 'Registered Devs', value: globalData.totalUsers, icon: <Users className="text-cyan-400" />, trend: '+42 this wk' },
-                  { label: 'Active Neural Hubs', value: globalData.activeUplinks, icon: <Activity className="text-magenta-400" />, trend: 'Stable' },
-                  { label: 'System Wellness', value: globalData.avgWellness + '%', icon: <TrendingUp className="text-green-400" />, trend: '+2.1% improvement' }
+                  { label: 'Total Users', value: globalData.totalUsers, icon: <Users className="text-cyan-400" />, trend: 'Live' },
+                  { label: 'Health Events', value: globalData.totalEvents, icon: <Activity className="text-magenta-400" />, trend: 'Aggregated' },
+                  { label: 'Support Tickets', value: globalData.totalTickets, icon: <ShieldAlert className="text-yellow-400" />, trend: 'Pending' },
+                  { label: 'Total Feedback', value: globalData.totalFeedback, icon: <MessageCircle className="text-green-400" />, trend: 'Received' }
                 ].map((kpi, i) => (
                   <div key={i} className="bg-slate-900/30 p-8 rounded-[32px] border border-white/5 relative overflow-hidden group">
                     <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:opacity-40 transition-opacity">{kpi.icon}</div>
@@ -365,16 +489,20 @@ const AdminAnalytics: React.FC = () => {
                <div className="bg-slate-950 p-8 rounded-[32px] border border-cyan-900/40 font-mono text-[11px] h-[600px] overflow-y-auto scrollbar-hide">
                   <div className="flex items-center gap-2 mb-6 text-cyan-500/40">
                     <Terminal size={14} />
-                    <span>DEBUG_LOG_INIT ... [OK]</span>
+                    <span>LIVE_EVENT_STREAM ... [CONNECTED]</span>
                   </div>
                   <div className="space-y-1.5 opacity-80">
-                    {[...Array(40)].map((_, i) => (
-                      <p key={i}>
-                        <span className="text-slate-600">[{new Date().toISOString()}]</span>
-                        <span className="text-cyan-600 ml-4">INFO:</span>
-                        <span className="text-slate-400 ml-4">Biometric packet anonymized ... Origin::ID_{Math.random().toString(36).substr(2, 6).toUpperCase()} ... Protocol::Neural_v2</span>
-                      </p>
-                    ))}
+                    {recentEvents.length === 0 ? (
+                       <p className="text-slate-600 italic">No recent events found on the network.</p>
+                    ) : (
+                      recentEvents.map((ev, i) => (
+                        <p key={i} className="border-b border-white/5 pb-1 mb-1">
+                          <span className="text-slate-600">[{new Date(ev.timestamp).toISOString()}]</span>
+                          <span className="text-cyan-600 ml-4">{ev.type}:</span>
+                          <span className="text-slate-400 ml-4">{ev.description || 'No description'} ... Severity::{ev.severity}</span>
+                        </p>
+                      ))
+                    )}
                   </div>
                </div>
             </div>

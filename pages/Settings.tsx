@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Shield, 
@@ -11,14 +10,20 @@ import {
   ChevronLeft,
   CheckCircle,
   AlertTriangle,
-  Fingerprint
+  Fingerprint,
+  User,
+  LogOut,
+  Mail
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { PrivacySettings } from '../types';
 import { FirebaseService } from '../services/firebaseService';
 
 const Settings: React.FC = () => {
-  const userId = "dev_alpha_01";
+  const navigate = useNavigate();
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [dbUser, setDbUser] = useState<any>(null);
+  
   const [settings, setSettings] = useState<PrivacySettings>({
     anonymizeAI: true,
     encryptLogs: true,
@@ -31,24 +36,55 @@ const Settings: React.FC = () => {
   const [saveStatus, setSaveStatus] = useState(false);
 
   useEffect(() => {
-    const loadSettings = async () => {
-      const stored = await FirebaseService.getPrivacySettings(userId);
-      if (stored) setSettings(stored);
-    };
-    loadSettings();
+    // Subscribe to auth state changes
+    const unsubscribe = FirebaseService.onAuthChange((user) => {
+      setCurrentUser(user);
+    });
+    return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    const loadData = async () => {
+      if (!currentUser?.uid) return;
+      const targetId = currentUser.uid;
+      
+      const stored = await FirebaseService.getPrivacySettings(targetId);
+      if (stored) setSettings(stored);
+      
+      const profile = await FirebaseService.getUserProfile(targetId);
+      if (profile) setDbUser(profile);
+    };
+    loadData();
+  }, [currentUser]);
+
+  const handleLogout = async () => {
+    await FirebaseService.logoutUser();
+    navigate('/login');
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!currentUser?.uid) return;
+    try {
+      await FirebaseService.deleteUserAccount(currentUser.uid);
+      navigate('/');
+    } catch (e) {
+      alert("Failed to delete account. Please try logging in again first.");
+    }
+  };
+
   const toggleSetting = async (key: keyof PrivacySettings) => {
+    if (!currentUser?.uid) return;
     const updated = { ...settings, [key]: !settings[key] };
     setSettings(updated);
-    await FirebaseService.savePrivacySettings(userId, updated);
+    await FirebaseService.savePrivacySettings(currentUser.uid, updated);
     triggerSaveEffect();
   };
 
   const updateEncryption = async (level: PrivacySettings['encryptionLevel']) => {
+    if (!currentUser?.uid) return;
     const updated = { ...settings, encryptionLevel: level };
     setSettings(updated);
-    await FirebaseService.savePrivacySettings(userId, updated);
+    await FirebaseService.savePrivacySettings(currentUser.uid, updated);
     triggerSaveEffect();
   };
 
@@ -58,8 +94,9 @@ const Settings: React.FC = () => {
   };
 
   const handleExport = () => {
+    if (!currentUser?.uid) return;
     const data = {
-      user: userId,
+      user: currentUser.uid,
       timestamp: new Date().toISOString(),
       settings: settings,
       mockEvents: [
@@ -94,6 +131,44 @@ const Settings: React.FC = () => {
               <span className="text-[10px] font-black uppercase">Cloud Synced</span>
             </div>
           )}
+        </div>
+
+        {/* Section 0: User Profile */}
+        <div className="glass-card rounded-[40px] p-10 space-y-8 border border-white/5 shadow-2xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+            <User size={120} />
+          </div>
+          
+          <div className="flex items-center gap-6 relative z-10">
+             <div className="w-20 h-20 rounded-full bg-slate-800 border-2 border-white/10 flex items-center justify-center overflow-hidden shadow-2xl">
+                {currentUser?.photoURL ? (
+                  <img src={currentUser.photoURL} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  <User size={32} className="text-slate-500" />
+                )}
+             </div>
+             <div>
+               <h2 className="text-2xl font-black uppercase tracking-tight">{dbUser?.name || currentUser?.displayName || 'DevWell User'}</h2>
+               <div className="flex items-center gap-2 text-slate-400 text-sm font-medium">
+                 <Mail size={14} />
+                 <span>{currentUser?.email || 'user@devwell.ai'}</span>
+               </div>
+               <div className="mt-2 flex items-center gap-2">
+                 <span className="bg-blue-500/10 text-blue-400 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border border-blue-500/20">
+                   {currentUser ? 'Verified Neural Link' : 'Demo Interface'}
+                 </span>
+               </div>
+             </div>
+          </div>
+
+          <div className="flex gap-4 relative z-10">
+            <button 
+              onClick={handleLogout}
+              className="flex-1 py-3 bg-white/5 hover:bg-white/10 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all border border-white/5"
+            >
+              <LogOut size={14} /> Log Out
+            </button>
+          </div>
         </div>
 
         {/* Section 1: AI Privacy */}
@@ -230,7 +305,7 @@ const Settings: React.FC = () => {
                   Cancel
                 </button>
                 <button 
-                  onClick={() => { setShowConfirmDelete(false); alert("Neural link terminated. Firebase Cloud data purged."); }}
+                  onClick={handleDeleteAccount}
                   className="flex-1 py-4 bg-red-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all shadow-xl shadow-red-600/30"
                 >
                   Confirm Delete

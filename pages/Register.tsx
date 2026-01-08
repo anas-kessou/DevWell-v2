@@ -1,8 +1,7 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Activity, Mail, Lock, User, Github, Chrome } from 'lucide-react';
-import { registerWithEmail, loginWithGoogle, loginWithGithub } from '../services/firebaseService';
+import { FirebaseService } from '../services/firebaseService';
 
 interface Props {
   onRegister: () => void;
@@ -12,26 +11,26 @@ const Register: React.FC<Props> = ({ onRegister }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError(null);
     setLoading(true);
     try {
-      await registerWithEmail(email, password);
+      await FirebaseService.registerWithEmail(email, password);
       onRegister();
       navigate('/dashboard');
     } catch (err: any) {
-      // Allow demo mode if Firebase auth is not enabled
-      if (err.code === 'auth/operation-not-allowed') {
-        console.log('Demo mode: Firebase auth not enabled, proceeding anyway');
+       if (err.code === 'auth/operation-not-allowed') {
+        // Fallback for demo mode
+        console.log("Demo register fallback");
         onRegister();
         navigate('/dashboard');
       } else {
-        setError(err.message || 'Failed to register');
+        setError(err.message || "Registration failed");
       }
     } finally {
       setLoading(false);
@@ -39,28 +38,38 @@ const Register: React.FC<Props> = ({ onRegister }) => {
   };
 
   const handleGoogleLogin = async () => {
-    setError('');
+    setError(null);
     setLoading(true);
     try {
-      await loginWithGoogle();
+      await FirebaseService.loginWithGoogle();
       onRegister();
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.message || 'Failed to sign up with Google');
+       if (err.code === 'auth/operation-not-allowed') {
+         onRegister();
+         navigate('/dashboard');
+      } else {
+        setError(err.message || "Google signup failed");
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const handleGithubLogin = async () => {
-    setError('');
+    setError(null);
     setLoading(true);
     try {
-      await loginWithGithub();
+      await FirebaseService.loginWithGithub();
       onRegister();
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.message || 'Failed to sign up with GitHub');
+        if (err.code === 'auth/operation-not-allowed') {
+         onRegister();
+         navigate('/dashboard');
+      } else {
+        setError(err.message || "GitHub signup failed");
+      }
     } finally {
       setLoading(false);
     }
@@ -135,7 +144,7 @@ const Register: React.FC<Props> = ({ onRegister }) => {
             <button 
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl transition-all shadow-lg shadow-blue-500/20 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl transition-all shadow-lg shadow-blue-500/20 active:scale-[0.98] disabled:opacity-50"
             >
               {loading ? 'Creating Account...' : 'Create Account'}
             </button>
@@ -149,6 +158,7 @@ const Register: React.FC<Props> = ({ onRegister }) => {
           <div className="grid grid-cols-2 gap-4">
             <button 
               onClick={handleGithubLogin}
+              type="button"
               disabled={loading}
               className="flex items-center justify-center gap-2 py-3 border border-slate-100 rounded-2xl hover:bg-slate-50 transition-colors font-semibold text-sm disabled:opacity-50"
             >
@@ -156,6 +166,7 @@ const Register: React.FC<Props> = ({ onRegister }) => {
             </button>
             <button 
               onClick={handleGoogleLogin}
+              type="button"
               disabled={loading}
               className="flex items-center justify-center gap-2 py-3 border border-slate-100 rounded-2xl hover:bg-slate-50 transition-colors font-semibold text-sm disabled:opacity-50"
             >
@@ -167,6 +178,12 @@ const Register: React.FC<Props> = ({ onRegister }) => {
         <p className="mt-8 text-center text-slate-500 text-sm">
           Already have an account? <Link to="/login" className="text-blue-500 font-bold hover:underline">Login Instead</Link>
         </p>
+
+        <div className="mt-8 text-center text-sm text-slate-500">
+           <Link to="/" className="text-blue-500 font-bold hover:underline">
+             ← Back to Home
+           </Link>
+        </div>
       </div>
     </div>
   );

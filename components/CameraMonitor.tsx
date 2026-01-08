@@ -1,8 +1,12 @@
 
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useImperativeHandle, forwardRef, useCallback } from 'react';
 import { Camera, CameraOff, Mic, MicOff, Scan, ShieldAlert, Zap, Waves, Activity, Loader2 } from 'lucide-react';
 import { GeminiService } from '../services/geminiService';
 import { HealthEvent, Severity, EventType } from '../types';
+
+export interface CameraMonitorHandle {
+  getSnapshot: () => string | null;
+}
 
 interface Props {
   onEventDetected: (event: Omit<HealthEvent, 'id' | 'timestamp'>) => void;
@@ -10,9 +14,22 @@ interface Props {
   setIsMonitoring: (val: boolean) => void;
 }
 
-const CameraMonitor: React.FC<Props> = ({ onEventDetected, isMonitoring, setIsMonitoring }) => {
+const CameraMonitor = forwardRef<CameraMonitorHandle, Props>(({ onEventDetected, isMonitoring, setIsMonitoring }, ref) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  
+  useImperativeHandle(ref, () => ({
+    getSnapshot: () => {
+      if (!videoRef.current) return null;
+      const canvas = document.createElement('canvas'); // Create temp canvas
+      canvas.width = videoRef.current.videoWidth;
+      canvas.height = videoRef.current.videoHeight;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return null;
+      ctx.drawImage(videoRef.current, 0, 0);
+      return canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+    }
+  }));
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioProcessorRef = useRef<ScriptProcessorNode | null>(null);
   const audioDataRef = useRef<Int16Array | null>(null);
@@ -20,6 +37,59 @@ const CameraMonitor: React.FC<Props> = ({ onEventDetected, isMonitoring, setIsMo
   const [analyzing, setAnalyzing] = useState(false);
   const [currentStatus, setCurrentStatus] = useState<{type: string, severity: string, description: string} | null>(null);
   const [vocalScore, setVocalScore] = useState(0);
+
+  const recognitionRef = useRef<any>(null); // For SpeechRecognition
+  const [lastSpokenTime, setLastSpokenTime] = useState(0);
+
+  // Initialize Speech Recognition
+  useEffect(() => {
+    if ('webkitSpeechRecognition' in window) {
+      const recognition = new (window as any).webkitSpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+
+      recognition.onresult = async (event: any) => {
+        const now = Date.now();
+        if (now - lastSpokenTime < 3000) return; // Debounce so it doesn't listen to itself speaking
+
+        const transcript = event.results[event.results.length - 1][0].transcript;
+        if (transcript.trim().length > 0) {
+           handleVoiceInteraction(transcript);
+        }
+      };
+
+      recognition.onend = () => {
+        if (isMonitoring) recognition.start(); // Auto-restart
+      };
+
+      recognitionRef.current = recognition;
+    }
+  }, [isMonitoring, lastSpokenTime]);
+
+  const handleVoiceInteraction = async (text: string) => {
+    if (!videoRef.current) return;
+    
+    // 1. Capture Image
+    const canvas = document.createElement('canvas'); // Create temp canvas
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    ctx.drawImage(videoRef.current, 0, 0);
+    const imageBase64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+
+    // 2. Send to AI
+    setAnalyzing(true);
+    const response = await GeminiService.chatWithVision(text, imageBase64);
+    setAnalyzing(false);
+
+    // 3. Speak Response
+    setLastSpokenTime(Date.now()); // Prevent listening to self
+    await GeminiService.speak(response);
+    setLastSpokenTime(Date.now()); // Update again after speaking finishes
+  };
 
   const startMonitoring = async () => {
     try {
@@ -41,9 +111,17 @@ const CameraMonitor: React.FC<Props> = ({ onEventDetected, isMonitoring, setIsMo
         
         source.connect(audioProcessorRef.current);
         audioProcessorRef.current.connect(audioContextRef.current.destination);
+
+        // START CONVERSATION MODE
+        recognitionRef.current?.start();
+        
+        // Initial Greeting
+        setTimeout(() => {
+             GeminiService.speak("Hello! Welcome back, Anas. I am monitoring your wellness levels.");
+        }, 1000);
       }
     } catch (err) {
-      console.error("Neural Access Denied");
+      console.error("Neural Access Denied", err);
     }
   };
 
@@ -53,6 +131,7 @@ const CameraMonitor: React.FC<Props> = ({ onEventDetected, isMonitoring, setIsMo
       videoRef.current.srcObject = null;
     }
     audioContextRef.current?.close();
+    recognitionRef.current?.stop(); // Stop listening
     setIsMonitoring(false);
   };
 
@@ -162,6 +241,6 @@ const CameraMonitor: React.FC<Props> = ({ onEventDetected, isMonitoring, setIsMo
       </div>
     </div>
   );
-};
+});
 
 export default CameraMonitor;

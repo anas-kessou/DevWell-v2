@@ -9,12 +9,12 @@ interface Props {
 
 const HealthCharts: React.FC<Props> = ({ events }) => {
   const chartData = useMemo(() => {
-    // Generate dummy trend if no events
-    if (events.length < 2) {
+    // Generate flat baseline if no events
+    if (events.length === 0) {
       return Array.from({ length: 7 }, (_, i) => ({
-        time: i + ':00',
-        events: Math.floor(Math.random() * 5),
-        severity: Math.floor(Math.random() * 100)
+        time: `${i + 8}:00`, // Reasonable day start times
+        events: 0,
+        severity: 0
       }));
     }
 
@@ -25,11 +25,20 @@ const HealthCharts: React.FC<Props> = ({ events }) => {
       groups.set(hour, val + 1);
     });
 
-    return Array.from(groups.entries()).map(([time, count]) => ({
+    // Fill in gaps or just show what we have
+    // For a better chart, let's just map the events or return the groups
+    // If we want a nice line, we need sorted time entries
+    const sortedEntries = Array.from(groups.entries()).sort((a,b) => parseInt(a[0]) - parseInt(b[0]));
+    
+    // If we have very few data points, pad them strictly for visual stability if needed, 
+    // but the user asked for dynamic data. Let's just return the actuals mapped to the format.
+    if (sortedEntries.length === 0) return []; // Should be caught by events.length === 0 check above
+
+    return sortedEntries.map(([time, count]) => ({
       time,
       events: count,
-      severity: count * 20 // Dummy intensity
-    })).sort((a,b) => a.time.localeCompare(b.time));
+      severity: count * 20 // Still simplified severity estimation
+    }));
   }, [events]);
 
   const stats = useMemo(() => {
@@ -42,9 +51,9 @@ const HealthCharts: React.FC<Props> = ({ events }) => {
     }, 0) / total).toFixed(0) : 0;
 
     return [
-      { label: 'Total Alerts', value: total, trend: '+12%' },
-      { label: 'Critical Issues', value: high, trend: '-5%', color: 'text-red-500' },
-      { label: 'Avg Severity', value: avgSev + '%', trend: 'Stable' }
+      { label: 'Total Alerts', value: total, trend: total > 0 ? 'Active' : '0%' },
+      { label: 'Critical Issues', value: high, trend: high > 0 ? 'Review' : '0%', color: 'text-red-500' },
+      { label: 'Avg Severity', value: avgSev + '%', trend: 'Live' }
     ];
   }, [events]);
 

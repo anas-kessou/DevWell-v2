@@ -1,36 +1,47 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Activity, Mail, Lock, Github, Chrome } from 'lucide-react';
-import { loginWithEmail, loginWithGoogle, loginWithGithub } from '../services/firebaseService';
+import { Activity, Mail, Lock, Github, Chrome, AlertCircle } from 'lucide-react';
+import { FirebaseService } from '../services/firebaseService';
 
 interface Props {
-  onLogin: () => void;
+  onLogin: (email: string) => void;
 }
 
 const Login: React.FC<Props> = ({ onLogin }) => {
   const [email, setEmail] = useState('demo@devwell.ai');
   const [password, setPassword] = useState('password123');
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError(null);
     setLoading(true);
+
     try {
-      await loginWithEmail(email, password);
-      onLogin();
+      // Check for special admin credentials (local bypass)
+      const adminEmail = 'anaskessou4@gmail.com';
+      const adminPass = 'vji4ayanas7cf8';
+
+      if (email === adminEmail && password === adminPass) {
+          onLogin(email);
+          navigate('/dashboard');
+          return;
+      }
+
+      // Firebase Login
+      await FirebaseService.loginWithEmail(email, password);
+      onLogin(email);
       navigate('/dashboard');
     } catch (err: any) {
-      // Allow demo mode if Firebase auth is not enabled
       if (err.code === 'auth/operation-not-allowed' || email === 'demo@devwell.ai') {
-        console.log('Demo mode: Firebase auth not enabled, proceeding anyway');
-        onLogin();
+        // Fallback for demo/dev mode
+        console.log("Demo login fallback");
+        onLogin(email);
         navigate('/dashboard');
       } else {
-        setError(err.message || 'Failed to login');
+        setError(err.message || "Failed to login");
       }
     } finally {
       setLoading(false);
@@ -38,28 +49,38 @@ const Login: React.FC<Props> = ({ onLogin }) => {
   };
 
   const handleGoogleLogin = async () => {
-    setError('');
+    setError(null);
     setLoading(true);
     try {
-      await loginWithGoogle();
-      onLogin();
+      await FirebaseService.loginWithGoogle();
+      onLogin("google-user");
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.message || 'Failed to login with Google');
+      if (err.code === 'auth/operation-not-allowed') {
+         onLogin("google-demo");
+         navigate('/dashboard');
+      } else {
+        setError(err.message || "Google login failed");
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const handleGithubLogin = async () => {
-    setError('');
+    setError(null);
     setLoading(true);
     try {
-      await loginWithGithub();
-      onLogin();
+      await FirebaseService.loginWithGithub();
+      onLogin("github-user");
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.message || 'Failed to login with GitHub');
+       if (err.code === 'auth/operation-not-allowed') {
+         onLogin("github-demo");
+         navigate('/dashboard');
+      } else {
+        setError(err.message || "GitHub login failed");
+      }
     } finally {
       setLoading(false);
     }
@@ -80,7 +101,8 @@ const Login: React.FC<Props> = ({ onLogin }) => {
           <p className="text-slate-500 text-sm mb-8">Sign in to resume your wellness journey.</p>
 
           {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-2xl mb-4 text-sm">
+            <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-3 text-red-600 text-xs font-bold animate-in fade-in slide-in-from-top-2">
+              <AlertCircle size={16} />
               {error}
             </div>
           )}
@@ -120,7 +142,7 @@ const Login: React.FC<Props> = ({ onLogin }) => {
             <button 
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl transition-all shadow-lg shadow-blue-500/20 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl transition-all shadow-lg shadow-blue-500/20 active:scale-[0.98] disabled:opacity-50"
             >
               {loading ? 'Signing In...' : 'Sign In'}
             </button>
@@ -134,6 +156,7 @@ const Login: React.FC<Props> = ({ onLogin }) => {
           <div className="grid grid-cols-2 gap-4">
             <button 
               onClick={handleGithubLogin}
+              type="button"
               disabled={loading}
               className="flex items-center justify-center gap-2 py-3 border border-slate-100 rounded-2xl hover:bg-slate-50 transition-colors font-semibold text-sm disabled:opacity-50"
             >
@@ -141,6 +164,7 @@ const Login: React.FC<Props> = ({ onLogin }) => {
             </button>
             <button 
               onClick={handleGoogleLogin}
+              type="button"
               disabled={loading}
               className="flex items-center justify-center gap-2 py-3 border border-slate-100 rounded-2xl hover:bg-slate-50 transition-colors font-semibold text-sm disabled:opacity-50"
             >
@@ -152,6 +176,12 @@ const Login: React.FC<Props> = ({ onLogin }) => {
         <p className="mt-8 text-center text-slate-500 text-sm">
           Don't have an account? <Link to="/register" className="text-blue-500 font-bold hover:underline">Register Now</Link>
         </p>
+
+        <div className="mt-8 text-center text-sm text-slate-500">
+           <Link to="/" className="text-blue-500 font-bold hover:underline">
+             ← Back to Home
+           </Link>
+        </div>
       </div>
     </div>
   );

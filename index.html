@@ -28,8 +28,17 @@
         100% { transform: translateX(100%); }
       }
 
+      @keyframes neural-wave {
+        0%, 100% { transform: scaleY(0.4); opacity: 0.5; }
+        50% { transform: scaleY(1); opacity: 1; }
+      }
+
       .neural-glow {
         animation: neural-pulse 3s infinite ease-in-out;
+      }
+
+      .animate-wave {
+        animation: neural-wave 1s infinite ease-in-out;
       }
 
       .wave-container {
