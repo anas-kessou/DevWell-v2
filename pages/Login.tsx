@@ -8,8 +8,8 @@ interface Props {
 }
 
 const Login: React.FC<Props> = ({ onLogin }) => {
-  const [email, setEmail] = useState('demo@devwell.ai');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -20,29 +20,12 @@ const Login: React.FC<Props> = ({ onLogin }) => {
     setLoading(true);
 
     try {
-      // Check for special admin credentials (local bypass)
-      const adminEmail = 'anaskessou4@gmail.com';
-      const adminPass = 'vji4ayanas7cf8';
-
-      if (email === adminEmail && password === adminPass) {
-          onLogin(email);
-          navigate('/dashboard');
-          return;
-      }
-
       // Firebase Login
       await FirebaseService.loginWithEmail(email, password);
       onLogin(email);
       navigate('/dashboard');
     } catch (err: any) {
-      if (err.code === 'auth/operation-not-allowed' || email === 'demo@devwell.ai') {
-        // Fallback for demo/dev mode
-        console.log("Demo login fallback");
-        onLogin(email);
-        navigate('/dashboard');
-      } else {
-        setError(err.message || "Failed to login");
-      }
+      setError(err.message || "Failed to login");
     } finally {
       setLoading(false);
     }
@@ -56,12 +39,7 @@ const Login: React.FC<Props> = ({ onLogin }) => {
       onLogin("google-user");
       navigate('/dashboard');
     } catch (err: any) {
-      if (err.code === 'auth/operation-not-allowed') {
-         onLogin("google-demo");
-         navigate('/dashboard');
-      } else {
-        setError(err.message || "Google login failed");
-      }
+      setError(err.message || "Google login failed");
     } finally {
       setLoading(false);
     }
@@ -75,12 +53,7 @@ const Login: React.FC<Props> = ({ onLogin }) => {
       onLogin("github-user");
       navigate('/dashboard');
     } catch (err: any) {
-       if (err.code === 'auth/operation-not-allowed') {
-         onLogin("github-demo");
-         navigate('/dashboard');
-      } else {
-        setError(err.message || "GitHub login failed");
-      }
+      setError(err.message || "GitHub login failed");
     } finally {
       setLoading(false);
     }

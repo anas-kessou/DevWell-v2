@@ -126,7 +126,7 @@ const Support: React.FC = () => {
                                     type="text" 
                                     required
                                     className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-bold"
-                                    placeholder="Jane Doe"
+                                    placeholder=""
                                     value={formData.name}
                                     onChange={e => setFormData({...formData, name: e.target.value})}
                                 />
@@ -137,7 +137,7 @@ const Support: React.FC = () => {
                                     type="email" 
                                     required
                                     className="w-full bg-slate-900 border border-white/10 rounded-xl px-5 py-4 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-bold"
-                                    placeholder="jane@example.com"
+                                    placeholder=""
                                     value={formData.email}
                                     onChange={e => setFormData({...formData, email: e.target.value})}
                                 />
