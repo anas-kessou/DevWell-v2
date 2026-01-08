@@ -20,7 +20,7 @@ const Register: React.FC<Props> = ({ onRegister }) => {
     setError(null);
     setLoading(true);
     try {
-      await FirebaseService.registerWithEmail(email, password);
+      await FirebaseService.registerWithEmail(email, password, name);
       onRegister();
       navigate('/dashboard');
     } catch (err: any) {
