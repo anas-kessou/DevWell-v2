@@ -2,8 +2,10 @@
 import React, { useState } from 'react';
 import { Star, CheckCircle2 } from 'lucide-react';
 import { FirebaseService } from '../services/firebaseService';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const FeedbackForm: React.FC = () => {
+  const { t } = useLanguage();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [submitted, setSubmitted] = useState(false);
@@ -22,15 +24,15 @@ const FeedbackForm: React.FC = () => {
 
   return (
     <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800">
-      <h3 className="font-bold mb-4">Rate Your Experience</h3>
+      <h3 className="font-bold mb-4">{t('feedback.title')}</h3>
       
       {submitted ? (
         <div className="flex flex-col items-center justify-center py-6 text-center animate-in zoom-in-95 duration-300">
           <div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4">
             <CheckCircle2 size={24} />
           </div>
-          <p className="font-bold text-sm">Thank You!</p>
-          <p className="text-xs text-slate-500 mt-1">Your feedback helps us improve.</p>
+          <p className="font-bold text-sm">{t('feedback.thankYou')}</p>
+          <p className="text-xs text-slate-500 mt-1">{t('feedback.helpImprove')}</p>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -52,7 +54,7 @@ const FeedbackForm: React.FC = () => {
             ))}
           </div>
           <textarea 
-            placeholder="Any comments?"
+            placeholder={t('feedback.placeholder')}
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl p-3 text-xs min-h-[80px] focus:ring-2 focus:ring-blue-500"
@@ -62,7 +64,7 @@ const FeedbackForm: React.FC = () => {
             disabled={rating === 0}
             className="w-full bg-slate-900 dark:bg-white dark:text-slate-900 text-white py-3 rounded-2xl text-xs font-bold hover:opacity-90 transition-opacity disabled:opacity-50"
           >
-            Submit Feedback
+            {t('feedback.submit')}
           </button>
         </form>
       )}

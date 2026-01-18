@@ -1,9 +1,18 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Activity, Shield, Cpu, MessageSquare, Zap, ChevronRight, Eye, Brain, Lock, Activity as ActivityIcon, BarChart3, Radio } from 'lucide-react';
+import { Activity, Shield, Cpu, MessageSquare, Zap, ChevronRight, Eye, Brain, Lock, Activity as ActivityIcon, BarChart3, Radio, Menu, X, Sparkles, Globe } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const LandingPage: React.FC = () => {
   const location = useLocation();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { t, language, setLanguage, dir } = useLanguage();
+
+  const toggleLanguage = () => {
+    if (language === 'en') setLanguage('fr');
+    else if (language === 'fr') setLanguage('ar');
+    else setLanguage('en');
+  };
 
   useEffect(() => {
     if (location.state && (location.state as any).scrollTo) {
@@ -17,7 +26,7 @@ const LandingPage: React.FC = () => {
   return (
     <div className="bg-slate-950 text-white min-h-screen selection:bg-blue-500/30">
       {/* Navigation */}
-      <nav className="flex items-center justify-between px-8 py-6 max-w-7xl mx-auto sticky top-0 z-50 bg-slate-950/80 backdrop-blur-xl border-b border-white/5">
+      <nav className="flex items-center justify-between px-6 py-6 max-w-7xl mx-auto sticky top-0 z-50 bg-slate-950/80 backdrop-blur-xl border-b border-white/5">
         <div className="flex items-center gap-2 font-bold text-2xl tracking-tighter">
           <div className="bg-blue-600 p-2 rounded-lg shadow-lg shadow-blue-600/20">
             <Activity size={24} className="text-white" />
@@ -25,15 +34,35 @@ const LandingPage: React.FC = () => {
           <span>DevWell</span>
         </div>
         <div className="hidden md:flex items-center gap-8 text-slate-400 font-black text-[10px] uppercase tracking-[0.2em]">
-          <button onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })} className="hover:text-blue-500 transition-colors bg-transparent border-none cursor-pointer uppercase font-black tracking-[0.2em] text-[10px] text-slate-400">Features</button>
-          <Link to="/about" className="hover:text-blue-500 transition-colors">About</Link>
-          <Link to="/wellness" className="hover:text-blue-500 transition-colors">Wellness Hub</Link>
-          <button onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })} className="hover:text-blue-500 transition-colors bg-transparent border-none cursor-pointer uppercase font-black tracking-[0.2em] text-[10px] text-slate-400">How it Works</button>
+          <button onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })} className="hover:text-blue-500 transition-colors bg-transparent border-none cursor-pointer uppercase font-black tracking-[0.2em] text-[10px] text-slate-400">{t('features')}</button>
+          <Link to="/about" state={{ from: 'landing' }} className="hover:text-blue-500 transition-colors">{t('about')}</Link>
+          <Link to="/wellness" state={{ from: 'landing' }} className="hover:text-blue-500 transition-colors">{t('wellnessHub')}</Link>
+          <button onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })} className="hover:text-blue-500 transition-colors bg-transparent border-none cursor-pointer uppercase font-black tracking-[0.2em] text-[10px] text-slate-400">{t('howItWorks')}</button>
         </div>
         <div className="flex items-center gap-4">
-          <Link to="/login" className="px-5 py-2 text-xs font-black uppercase tracking-widest hover:text-blue-500 transition-colors">Login</Link>
-          <Link to="/register" className="bg-blue-600 hover:bg-blue-700 px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-900/20">Get Started</Link>
+          <button onClick={toggleLanguage} className="hidden sm:flex items-center gap-2 px-3 py-2 text-[10px] font-black uppercase text-slate-400 hover:text-white transition-colors border border-white/10 rounded-xl">
+             <Globe size={14} /> {language.toUpperCase()}
+          </button>
+          <Link to="/login" className="hidden sm:block px-5 py-2 text-xs font-black uppercase tracking-widest hover:text-blue-500 transition-colors">{t('login')}</Link>
+          <Link to="/register" className="hidden sm:block bg-blue-600 hover:bg-blue-700 px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-900/20">{t('getStarted')}</Link>
+          <button className="md:hidden text-slate-400" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+            {mobileMenuOpen ? <X /> : <Menu />}
+          </button>
         </div>
+
+        {/* Mobile Menu */}
+        {mobileMenuOpen && (
+           <div className="absolute top-full left-0 w-full bg-slate-950 border-b border-white/5 p-6 md:hidden flex flex-col gap-6 shadow-2xl animate-in slide-in-from-top-5">
+              <button onClick={() => {document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }); setMobileMenuOpen(false)}} className="text-left text-sm font-bold text-slate-400 hover:text-white uppercase tracking-widest bg-transparent border-none p-0">{t('features')}</button>
+              <Link to="/about" className="text-sm font-bold text-slate-400 hover:text-white uppercase tracking-widest">{t('about')}</Link>
+              <Link to="/wellness" className="text-sm font-bold text-slate-400 hover:text-white uppercase tracking-widest">{t('wellnessHub')}</Link>
+              <button onClick={() => {document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' }); setMobileMenuOpen(false)}} className="text-left text-sm font-bold text-slate-400 hover:text-white uppercase tracking-widest bg-transparent border-none p-0">{t('howItWorks')}</button>
+              <button onClick={() => {toggleLanguage(); setMobileMenuOpen(false)}} className="text-left text-sm font-bold text-slate-400 hover:text-white uppercase tracking-widest bg-transparent border-none p-0 flex items-center gap-2"><Globe size={16}/> Language: {language.toUpperCase()}</button>
+              <div className="h-px bg-white/5 my-2" />
+              <Link to="/login" className="text-center w-full py-3 rounded-xl bg-white/5 text-xs font-black uppercase tracking-widest">{t('login')}</Link>
+              <Link to="/register" className="text-center w-full py-3 rounded-xl bg-blue-600 text-xs font-black uppercase tracking-widest">{t('getStarted')}</Link>
+           </div>
+        )}
       </nav>
 
       {/* Hero Section */}
@@ -42,22 +71,22 @@ const LandingPage: React.FC = () => {
         
         <div className="inline-flex items-center gap-2 bg-blue-600/10 border border-blue-500/20 px-4 py-2 rounded-full mb-8 animate-in fade-in slide-in-from-top-4 duration-700">
           <Sparkles size={14} className="text-blue-400" />
-          <span className="text-[10px] font-black uppercase tracking-widest text-blue-400">Powered by Gemini 3 Neural Engine</span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-blue-400">{t('poweredBy')}</span>
         </div>
 
         <h1 className="text-6xl md:text-8xl font-black mb-8 bg-gradient-to-b from-white via-white to-slate-500 bg-clip-text text-transparent leading-[1.1] tracking-tighter">
-          Code Without <br /> the Burnout.
+          {t('heroTitle')}
         </h1>
         <p className="text-slate-400 text-xl max-w-2xl mx-auto mb-12 leading-relaxed font-medium">
-          DevWell uses world-class AI to analyze your physical and mental state in real-time, helping you maintain peak performance without sacrificing your health.
+          {t('heroSubtitle')}
         </p>
         
         <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
           <Link to="/register" className="w-full sm:w-auto bg-white text-slate-950 px-10 py-5 rounded-full font-black uppercase tracking-widest text-sm flex items-center justify-center gap-2 group hover:scale-105 transition-all shadow-2xl shadow-white/10">
-            Start Neural Sync <ChevronRight className="group-hover:translate-x-1 transition-transform" />
+            {t('startNeuralSync')} {dir === 'ltr' ? <ChevronRight className="group-hover:translate-x-1 transition-transform" /> : <ChevronRight className="group-hover:-translate-x-1 transition-transform rotate-180" />}
           </Link>
           <button onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })} className="w-full sm:w-auto border border-slate-700 hover:border-slate-500 px-10 py-5 rounded-full font-black uppercase tracking-widest text-sm transition-all bg-slate-900/40 backdrop-blur-sm cursor-pointer text-white">
-            View Protocol
+            {t('viewProtocol')}
           </button>
         </div>
 
@@ -69,10 +98,10 @@ const LandingPage: React.FC = () => {
                 <div className="glass-card p-8 rounded-3xl border border-blue-500/20 max-w-lg text-left space-y-4">
                     <div className="flex items-center gap-2 text-blue-500">
                         <ActivityIcon size={16} className="animate-pulse" />
-                        <span className="text-[10px] font-black uppercase tracking-widest">System Online</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest">{t('systemStatus')}</span>
                     </div>
-                    <h3 className="text-2xl font-black tracking-tight">Biometric Stream Active</h3>
-                    <p className="text-xs text-slate-400 font-medium">DevWell is currently processing visual and auditory markers to ensure optimal ergonomic alignment and focus depth.</p>
+                    <h3 className="text-2xl font-black tracking-tight">{t('biometricActive')}</h3>
+                    <p className="text-xs text-slate-400 font-medium">{t('biometricDesc')}</p>
                 </div>
             </div>
           </div>
@@ -84,20 +113,20 @@ const LandingPage: React.FC = () => {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-900/20 via-slate-950 to-slate-950 -z-10" />
         
         <div className="max-w-7xl mx-auto mb-20 text-center">
-            <h2 className="text-xs font-black text-blue-500 uppercase tracking-[0.5em] mb-4">The Process</h2>
-            <h3 className="text-4xl md:text-5xl font-black tracking-tighter mb-6">Neural Synchronization</h3>
-            <Link to="/docs" className="inline-flex items-center gap-2 text-sm font-black uppercase tracking-widest text-slate-400 hover:text-blue-500 transition-colors group">
-              Learn More <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+            <h2 className="text-xs font-black text-blue-500 uppercase tracking-[0.5em] mb-4">{t('processTitle')}</h2>
+            <h3 className="text-4xl md:text-5xl font-black tracking-tighter mb-6">{t('processHeading')}</h3>
+            <Link to="/docs" state={{ from: 'landing' }} className="inline-flex items-center gap-2 text-sm font-black uppercase tracking-widest text-slate-400 hover:text-blue-500 transition-colors group">
+              {t('learnMore')} {dir === 'ltr' ? <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" /> : <ChevronRight size={14} className="group-hover:-translate-x-1 transition-transform rotate-180" />}
             </Link>
         </div>
 
         <div className="grid md:grid-cols-3 gap-12 max-w-7xl mx-auto relative">
-            <div className="absolute top-12 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-blue-500/20 to-transparent hidden md:block" />
+            <div className={`absolute top-12 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-blue-500/20 to-transparent hidden md:block`} />
 
             {[
-                { step: "01", title: "Initialize Sensors", desc: "Activate the secure neural HUD. The system connects to your camera and microphone to establish a real-time biometric stream." },
-                { step: "02", title: "AI Processing", desc: "Our Gemini-powered engine analyzes micro-expressions, vocal tone, and posture 30 times per second to detect fatigue markers." },
-                { step: "03", title: "Wellness Tuning", desc: "Receive instant, non-intrusive nudges to correct posture, take deep breaths, or enter 'Focus Mode' before burnout hits." }
+                { step: "01", title: t('step1Title'), desc: t('step1Desc') },
+                { step: "02", title: t('step2Title'), desc: t('step2Desc') },
+                { step: "03", title: t('step3Title'), desc: t('step3Desc') }
             ].map((item, i) => (
                 <div key={i} className="relative z-10 text-center group">
                     <div className="w-24 h-24 mx-auto bg-slate-950 rounded-3xl border border-white/10 flex items-center justify-center mb-8 shadow-2xl group-hover:scale-110 transition-transform group-hover:border-blue-500/50">
@@ -165,7 +194,7 @@ const LandingPage: React.FC = () => {
               label: "Data" 
             }
           ].map((feature, i) => (
-            <Link key={i} to={`/feature/${feature.id}`} className="block">
+            <Link key={i} to={`/feature/${feature.id}`} state={{ from: 'landing' }} className="block">
               <div className="glass-card border border-white/5 p-10 rounded-[40px] hover:border-blue-500/30 transition-all group relative overflow-hidden h-full">
                 <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/5 blur-3xl rounded-full group-hover:bg-blue-500/10 transition-colors" />
                 <div className="bg-slate-900 border border-white/10 w-16 h-16 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform shadow-xl">
@@ -188,8 +217,8 @@ const LandingPage: React.FC = () => {
             <span>DevWell</span>
           </div>
           <div className="flex gap-10 text-[10px] font-black uppercase tracking-widest text-slate-500">
-            <Link to="/about" className="hover:text-white transition-colors">About</Link>
-            <Link to="/wellness" className="hover:text-white transition-colors">Wellness Hub</Link>
+            <Link to="/about" state={{ from: 'landing' }} className="hover:text-white transition-colors">About</Link>
+            <Link to="/wellness" state={{ from: 'landing' }} className="hover:text-white transition-colors">Wellness Hub</Link>
             <a href="#" className="hover:text-white transition-colors">Twitter</a>
             <a href="#" className="hover:text-white transition-colors">GitHub</a>
           </div>
@@ -199,25 +228,5 @@ const LandingPage: React.FC = () => {
     </div>
   );
 };
-
-const Sparkles = ({ className, size }: { className?: string, size?: number }) => (
-    <svg 
-        width={size || 24} 
-        height={size || 24} 
-        viewBox="0 0 24 24" 
-        fill="none" 
-        stroke="currentColor" 
-        strokeWidth="2" 
-        strokeLinecap="round" 
-        strokeLinejoin="round" 
-        className={className}
-    >
-        <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
-        <path d="M5 3v4"/>
-        <path d="M19 17v4"/>
-        <path d="M3 5h4"/>
-        <path d="M17 19h4"/>
-    </svg>
-)
 
 export default LandingPage;

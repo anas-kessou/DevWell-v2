@@ -13,7 +13,8 @@ import {
   getDoc,
   serverTimestamp,
   collectionGroup,
-  getCountFromServer
+  getCountFromServer,
+  updateDoc
 } from "firebase/firestore";
 import { 
   getAuth, 
@@ -24,9 +25,12 @@ import {
   User,
   GoogleAuthProvider,
   GithubAuthProvider,
-  signInWithPopup
+  signInWithPopup,
+  updatePassword,
+  EmailAuthProvider,
+  reauthenticateWithCredential
 } from "firebase/auth";
-import { HealthEvent, PrivacySettings } from "../types";
+import { HealthEvent, PrivacySettings, SupportTicket, UserProfile } from "../types";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBqsrPg7DutKyhnvGwdchuEfg7LECz684Q",
@@ -129,6 +133,15 @@ export class FirebaseService {
         ...event,
         timestamp: serverTimestamp(),
       });
+
+      // Update firstCameraSync if it doesn't exist (First detection)
+      const userRef = doc(db, "users", userId);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists() && !userSnap.data().firstCameraSync) {
+         await updateDoc(userRef, {
+           firstCameraSync: serverTimestamp()
+         });
+      }
     } catch (e) {
       console.error("Firebase Error:", e);
     }
@@ -149,11 +162,151 @@ export class FirebaseService {
           severity: data.severity,
           description: data.description,
           timestamp: data.timestamp?.toMillis() || Date.now(),
+          ...data
         } as HealthEvent;
       });
     } catch (e) {
       console.error("Firebase Error:", e);
       return [];
+    }
+  }
+
+  // Get alerts count for the last 24 hours
+  static async get24HourAlerts(userId: string): Promise<number> {
+    try {
+      const colRef = collection(db, "users", userId, "events");
+      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      
+      const q = query(
+        colRef, 
+        where("timestamp", ">=", yesterday)
+      );
+      
+      const snapshot = await getCountFromServer(q);
+      return snapshot.data().count;
+    } catch (e) {
+      console.error("Error fetching 24h alerts:", e);
+      return 0;
+    }
+  }
+
+  // Get raw fatigue readings
+  static async getFatigueReadings(userId: string, hours: number = 24): Promise<{timestamp: number, level: number}[]> {
+    try {
+      const colRef = collection(db, "users", userId, "events");
+      const startTime = new Date(Date.now() - hours * 60 * 60 * 1000);
+      
+      const q = query(
+        colRef,
+        where("type", "==", "FATIGUE"),
+        where("timestamp", ">=", startTime),
+        orderBy("timestamp", "asc")
+      );
+      
+      const snapshot = await getDocs(q);
+      return snapshot.docs
+        .map(doc => ({
+          timestamp: doc.data().timestamp?.toMillis() || Date.now(),
+          level: doc.data().fatigueLevel || 0
+        }))
+        .filter(item => item.level > 0);
+    } catch (e) {
+      console.error("Error fetching fatigue readings:", e);
+      return []; // Return empty instead of fallback mock data
+    }
+  }
+
+  // Get hourly fatigue averages
+  static async getHourlyFatigueAverage(userId: string): Promise<{time: string, avgFatigue: number}[]> {
+    try {
+      const readings = await this.getFatigueReadings(userId, 24);
+      
+      // If no readings, return initialized 0 hour slots for consistency
+      const hourlyData: {[key: string]: number[]} = {};
+      const now = new Date();
+      
+      for(let i=0; i<24; i++) {
+        const d = new Date(now.getTime() - (23-i) * 60 * 60 * 1000);
+        const hourStr = d.getHours().toString().padStart(2, '0') + ":00";
+        hourlyData[hourStr] = [];
+      }
+      
+      if (readings.length === 0) {
+          // Return empty structure with 0s
+          return Object.entries(hourlyData).map(([time, values]) => ({
+            time,
+            avgFatigue: 0
+          }));
+      }
+      
+      readings.forEach(reading => {
+        const d = new Date(reading.timestamp);
+        const hourStr = d.getHours().toString().padStart(2, '0') + ":00";
+        if (hourlyData[hourStr]) {
+          hourlyData[hourStr].push(reading.level);
+        }
+      });
+      
+      return Object.entries(hourlyData).map(([time, values]) => ({
+        time,
+        avgFatigue: values.length ? Math.round((values.reduce((a, b) => a + b, 0) / values.length) * 10) / 10 : 0
+      }));
+    } catch (e) {
+      console.error("Error calculating hourly fatigue:", e);
+      return [];
+    }
+  }
+
+  // Get 7-day activity based on session usage or alerts count
+  static async get7DayActivity(userId: string): Promise<{name: string, activity: number}[]> {
+    try {
+      // Mock implementation for now
+      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const today = new Date().getDay();
+      
+      return Array(7).fill(0).map((_, i) => {
+        const dayIndex = (today - 6 + i + 7) % 7;
+        return {
+            name: days[dayIndex],
+            activity: 0 
+        };
+      });
+    } catch (e) {
+       return [];
+    }
+  }
+  
+  // Get long-term progress data from firstCameraSync to Now
+  static async getProgressData(userId: string): Promise<any[]> {
+    try {
+        const userRef = doc(db, "users", userId);
+        const userSnap = await getDoc(userRef);
+        
+        let startTime = Date.now() - 7 * 24 * 60 * 60 * 1000; // Default 7 days ago if no sync
+        
+        if (userSnap.exists() && userSnap.data().firstCameraSync) {
+            startTime = userSnap.data().firstCameraSync.toMillis();
+        } 
+
+        const now = Date.now();
+        // Ensure at least 1 day difference
+        let daysDiff = Math.max(1, Math.floor((now - startTime) / (24 * 60 * 60 * 1000)));
+        if (daysDiff > 365) daysDiff = 365; // Limit to 1 year for safety
+
+        // Generate daily points
+        return Array(daysDiff + 1).fill(0).map((_, i) => {
+             const d = new Date(startTime + i * 24 * 60 * 60 * 1000);
+             return {
+                date: d.toLocaleDateString(undefined, {month: '2-digit', day: '2-digit'}),
+                fullDate: d.toLocaleDateString(),
+                timestamp: d.getTime(),
+                productivityScore: 0, 
+                avgFatigue: 0
+             };
+        });
+    } catch(e) {
+        console.error("Error getting progress data", e);
+        return [];
     }
   }
 
@@ -187,6 +340,20 @@ export class FirebaseService {
       await setDoc(docRef, { tier: 'pro' }, { merge: true });
     } catch (e) {
       console.error("Upgrade Error:", e);
+    }
+  }
+
+  // Toggles a user's subscription tier
+  static async toggleTier(userId: string, targetTier: 'free' | 'pro'): Promise<void> {
+    try {
+      const userRef = doc(db, "users", userId);
+      // Use setDoc with merge: true to ensure it works even if the document is missing or partial
+      await setDoc(userRef, {
+        tier: targetTier
+      }, { merge: true });
+    } catch (e) {
+      console.error("Error toggling tier:", e);
+      throw e;
     }
   }
 
@@ -334,6 +501,166 @@ export class FirebaseService {
     } catch (e) {
       console.error("Delete Account Error:", e);
       throw e;
+    }
+  }
+
+  static async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    const user = auth.currentUser;
+    if (!user || !user.email) throw new Error("No user authenticated");
+    
+    try {
+      const credential = EmailAuthProvider.credential(user.email, currentPassword);
+      await reauthenticateWithCredential(user, credential);
+      await updatePassword(user, newPassword);
+    } catch (e) {
+      console.error("Error changing password:", e);
+      throw e;
+    }
+  }
+
+  static async getHourlyActivity() {
+    return Array.from({ length: 24 }, (_, i) => ({
+      hour: i,
+      activeUsers: 0,
+      freeUsers: 0,
+      proUsers: 0
+    }));
+  }
+
+  static async getUsersByTier() {
+    return [
+      { date: 'Mon', free: 0, pro: 0, zinPro: 0 },
+      { date: 'Tue', free: 0, pro: 0, zinPro: 0 },
+      { date: 'Wed', free: 0, pro: 0, zinPro: 0 },
+      { date: 'Thu', free: 0, pro: 0, zinPro: 0 },
+      { date: 'Fri', free: 0, pro: 0, zinPro: 0 },
+      { date: 'Sat', free: 0, pro: 0, zinPro: 0 },
+      { date: 'Sun', free: 0, pro: 0, zinPro: 0 },
+    ];
+  }
+
+  static async getAlertHistogram() {
+     return [
+       { range: '0-5', count: 0 },
+       { range: '6-10', count: 0 },
+       { range: '11-20', count: 0 },
+       { range: '21-30', count: 0 },
+       { range: '31-50', count: 0 },
+       { range: '50+', count: 0 },
+     ];
+  }
+  
+  static async getFeedbackStats() {
+    try {
+      const q = query(collection(db, "feedback"), limit(100));
+      const snapshot = await getDocs(q);
+      
+      if (snapshot.empty) {
+         return { avgRating: "0.0", totalRaters: 0, distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } };
+      }
+
+      let total = 0;
+      let count = 0;
+      let distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+      
+      snapshot.forEach(doc => {
+        const r = doc.data().rating;
+        if (typeof r === 'number') {
+           total += r;
+           count++;
+           if(r >= 1 && r <= 5) distribution[r as keyof typeof distribution]++;
+        }
+      });
+      
+      return {
+        avgRating: count > 0 ? (total / count).toFixed(1) : "0.0",
+        totalRaters: count,
+        distribution
+      };
+    } catch {
+      return { avgRating: "0.0", totalRaters: 0, distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } };
+    }
+  }
+
+  static async getTicketDistribution() {
+    try {
+        const q = query(collection(db, "support_tickets"));
+        const snapshot = await getDocs(q);
+        
+        if (snapshot.empty) {
+           return [
+             { name: 'general', value: 0 },
+             { name: 'support', value: 0 },
+             { name: 'feedback', value: 0 },
+             { name: 'billing', value: 0 },
+           ];
+        }
+
+        const dist: any = { general: 0, support: 0, feedback: 0, billing: 0 };
+        snapshot.forEach(doc => {
+            const issue = doc.data().issue;
+            if(dist[issue] !== undefined) dist[issue]++;
+        });
+        return Object.entries(dist).map(([name, value]) => ({ name, value }));
+    } catch {
+        return [
+          { name: 'general', value: 0 },
+          { name: 'support', value: 0 },
+          { name: 'feedback', value: 0 },
+          { name: 'billing', value: 0 },
+        ];
+    }
+  }
+
+  static async getAllFeedbackRaw() {
+      try {
+        const q = query(collection(db, "feedback"), orderBy("timestamp", "desc"), limit(50));
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(d => d.data());
+      } catch {
+        return [];
+      }
+  }
+
+  static async getAllTicketsRaw() {
+      try {
+        const q = query(collection(db, "support_tickets"), limit(50));
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(d => d.data());
+      } catch {
+        return [];
+      }
+  }
+
+  static async activateDemoMode(): Promise<void> {
+    const auth = getAuth();
+    let user = auth.currentUser;
+    
+    if (!user) {
+        // Create a random demo user
+        const randomId = Math.random().toString(36).substring(7);
+        const email = `demo_${randomId}@devwell.app`;
+        const password = `pass_${randomId}`; 
+        
+        try {
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            user = userCredential.user;
+            
+            // Initialize user doc as PRO directly
+            await setDoc(doc(db, "users", user.uid), {
+                email: user.email,
+                name: "Demo Explorer",
+                tier: 'pro', 
+                createdAt: serverTimestamp(),
+                isDemo: true
+            });
+        } catch (e) {
+            console.error("Demo creation failed:", e);
+            throw e;
+        }
+    } else {
+        // Upgrade existing user for demo purposes
+        await this.upgradeUser(user.uid);
     }
   }
 }

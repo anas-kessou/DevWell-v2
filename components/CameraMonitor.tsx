@@ -158,7 +158,8 @@ const CameraMonitor = forwardRef<CameraMonitorHandle, Props>(({ onEventDetected,
     try {
       const result = await GeminiService.analyzeNeuralBurst(imageBase64, audioBase64);
       if (result) {
-        if (result.severity !== Severity.LOW) {
+        // Allow FATIGUE events of any severity to update the dashboard LED
+        if (result.severity !== Severity.LOW || result.type === 'FATIGUE') {
           onEventDetected(result);
           setCurrentStatus(result);
           setTimeout(() => setCurrentStatus(null), 6000);

@@ -12,7 +12,7 @@ export class GeminiService {
     const ai = this.getClient();
     const parts: any[] = [
       { inlineData: { mimeType: 'image/jpeg', data: imageBuffer } },
-      { text: "Neural Analysis: Review video for posture/fatigue. Return JSON: {type: 'FATIGUE'|'POSTURE'|'STRESS'|'FOCUS', severity: 'LOW'|'MEDIUM'|'HIGH', description: string, vocalTensionScore: number}." }
+      { text: "Neural Analysis: Review video for posture/fatigue. Return JSON: {type: 'FATIGUE'|'POSTURE'|'STRESS'|'FOCUS', severity: 'LOW'|'MEDIUM'|'HIGH', description: string, vocalTensionScore: number, fatigueLevel: number (1-9)}." }
     ];
 
     if (audioBuffer) {
@@ -20,7 +20,7 @@ export class GeminiService {
     }
 
     const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash-latest',
+      model: 'gemini-2.0-flash',
       contents: { parts },
       config: {
         responseMimeType: "application/json",
@@ -30,7 +30,8 @@ export class GeminiService {
             type: { type: Type.STRING },
             severity: { type: Type.STRING },
             description: { type: Type.STRING },
-            vocalTensionScore: { type: Type.NUMBER }
+            vocalTensionScore: { type: Type.NUMBER },
+            fatigueLevel: { type: Type.NUMBER }
           }
         }
       }
@@ -48,7 +49,7 @@ export class GeminiService {
     const dataSummary = JSON.stringify(history);
 
     const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash-latest',
+      model: 'gemini-2.0-flash',
       contents: [{ role: 'user', parts: [{ text: `Perform deep burnout forecasting: ${dataSummary}` }] }],
       config: {
         responseMimeType: "application/json",
@@ -120,7 +121,7 @@ export class GeminiService {
   static async generateBioBlueprint(history: any[]): Promise<BioBlueprint | null> {
     const ai = this.getClient();
     const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash-latest',
+      model: 'gemini-2.0-flash',
       contents: [{ role: 'user', parts: [{ text: `Generate Bio-Blueprint: ${JSON.stringify(history)}` }] }],
       config: {
         responseMimeType: "application/json",
@@ -185,6 +186,8 @@ export class GeminiService {
       - If Health History shows frequent breaks but Visual shows stress -> Suggest deeper rest.
       
       ${params.isADHDMode ? "ADHD MODE: Keep your conversational reply extremely concise and actionable." : ""}
+
+      ADOPT A PERSONA: Match the user's intent. If they seem worried, be a reassuring doctor-like figure. If they seem frustrated, be a supportive assistant.
       
       Return structured JSON only:
       {
@@ -201,7 +204,7 @@ export class GeminiService {
 
     try {
       const response = await ai.models.generateContent({
-        model: 'gemini-1.5-flash-latest',
+        model: 'gemini-2.0-flash',
         contents: [
           {
             role: 'user',
@@ -235,10 +238,64 @@ export class GeminiService {
     }
   }
 
+  static async analyzeFeedbackAndSuggestions(feedback: any[], supportTickets: any[]): Promise<any> {
+    const ai = this.getClient();
+    const feedbackSummary = JSON.stringify(feedback);
+    const ticketsSummary = JSON.stringify(supportTickets);
+
+    const prompt = `
+      You are an expert Product Manager and Data Analyst for the 'DevWell' application.
+      Analyze the following Feedback data and Support Tickets to generate a comprehensive report.
+      
+      FEEDBACK DATA: ${feedbackSummary}
+      SUPPORT TICKETS: ${ticketsSummary}
+
+      Generate a structured report including:
+      1. A concise executive summary.
+      2. Sentiment breakdown (approximate counts based on text).
+      3. Top 3 recurring issues.
+      4. Top 3 feature suggestions.
+      5. User suggestions and potential action items for the dev team.
+      6. Identify the overall trend (Improving, Stable, Declining).
+    `;
+
+    try {
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.0-flash',
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              summary: { type: Type.STRING },
+              sentimentBreakdown: { 
+                type: Type.OBJECT,
+                properties: {
+                  positive: { type: Type.NUMBER },
+                  neutral: { type: Type.NUMBER },
+                  negative: { type: Type.NUMBER }
+                }
+              },
+              topIssues: { type: Type.ARRAY, items: { type: Type.STRING } },
+              suggestions: { type: Type.ARRAY, items: { type: Type.STRING } },
+              trends: { type: Type.STRING },
+              actionItems: { type: Type.ARRAY, items: { type: Type.STRING } }
+            }
+          }
+        }
+      });
+      return JSON.parse(response.text || '{}');
+    } catch (error) {
+       console.error("AI Feedback Analysis failed:", error);
+       return null;
+    }
+  }
+
   static async getSearchGroundedInfo(message: string): Promise<any> {
     const ai = this.getClient();
     const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash-latest',
+      model: 'gemini-2.0-flash',
       contents: [{ role: 'user', parts: [{ text: "Provide a helpful, explanatory, and grounded answer to: " + message }] }],
       config: {
         tools: [{ googleSearch: {} }],
@@ -260,8 +317,24 @@ export class GeminiService {
 
   static async getWellnessChat(params: { message: string; useThinking: boolean; isADHDMode: boolean }): Promise<string> {
     const ai = this.getClient();
-    const model = 'gemini-1.5-flash-latest';
-    const systemInstruction = "You are DevWell AI Assistant. Your role is strictly to EXPERTLY ASSIST the developer. You help with coding questions, explain complex concepts, and answer general queries. You are helpful, precise, and educational. If asked about code, provide clear examples.";
+    const model = 'gemini-2.0-flash';
+    const systemInstruction = `
+    You are DevWell AI, a highly advanced adaptive wellness companion for developers.
+    
+    CORE DIRECTIVE: You MUST adapt your persona to the user's implicit or explicit needs.
+    
+    DETECTED PERSONAS:
+    1. "The Teacher": If the user is confused, asking "how" or "why". Explain concepts simply, use analogies.
+    2. "The Doctor" (Simulated): If the user reports symptoms (back pain, eye strain). Be empathetic, professional, ask follow-up questions. (ALWAYS disclaim you are an AI).
+    3. "The Assistant": If the user wants to get things done. Be brief, efficient, actionable.
+    4. "The Coach": If the user is unmotivated. Be high-energy, demanding but encouraging.
+    
+    RESPONSE RULES:
+    - First, silently identify the intent.
+    - Then, generate the response fully embodying that persona.
+    - Do NOT say "As a teacher I would say...". Just BE the teacher.
+    - Keep responses concise unless asked for detail.
+    `;
 
     try {
       const response = await ai.models.generateContent({
@@ -294,7 +367,7 @@ export class GeminiService {
   static async getSystemInsights(feedback: string[], alertCount: number): Promise<any> {
     const ai = this.getClient();
     const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash-latest',
+      model: 'gemini-2.0-flash',
       contents: [{ role: 'user', parts: [{ text: `Analyze platform performance. Alerts: ${alertCount}. Feedback: ${JSON.stringify(feedback)}. Return JSON: {sentimentSummary: string, directives: string[]}` }] }],
       config: {
         responseMimeType: "application/json",
@@ -317,7 +390,7 @@ export class GeminiService {
   static async auditAnonymity(stats: any): Promise<any> {
     const ai = this.getClient();
     const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash-latest',
+      model: 'gemini-2.0-flash',
       contents: [{ role: 'user', parts: [{ text: `Audit privacy risk for stats: ${JSON.stringify(stats)}. Return JSON: {safetyScore: number, riskLevel: string, privacyTips: string[]}` }] }],
       config: {
         responseMimeType: "application/json",
@@ -340,8 +413,8 @@ export class GeminiService {
 
   static async analyzeCameraInput(imageBase64: string, message: string = "What do you see?"): Promise<string> {
     const ai = this.getClient();
-    // Using gemini-1.5-flash-latest which is often more stable for v1beta endpoints
-    const model = 'gemini-1.5-flash-latest';
+    // Using gemini-2.0-flash which is often more stable for v1beta endpoints
+    const model = 'gemini-2.0-flash';
 
     try {
       const response = await ai.models.generateContent({
@@ -371,7 +444,7 @@ export class GeminiService {
   static async chatWithVision(message: string, base64Image: string): Promise<string> {
     const ai = this.getClient();
     const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash-latest',
+      model: 'gemini-2.0-flash',
       contents: [
         {
           role: 'user',

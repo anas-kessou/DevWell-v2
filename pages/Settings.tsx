@@ -18,9 +18,12 @@ import {
 import { Link, useNavigate } from 'react-router-dom';
 import { PrivacySettings } from '../types';
 import { FirebaseService } from '../services/firebaseService';
+import { useLanguage } from '../contexts/LanguageContext';
+import { Globe } from 'lucide-react';
 
 const Settings: React.FC = () => {
   const navigate = useNavigate();
+  const { t, dir, language, setLanguage } = useLanguage();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [dbUser, setDbUser] = useState<any>(null);
   
@@ -112,23 +115,23 @@ const Settings: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans p-8 md:p-12">
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans p-8 md:p-12" dir={dir}>
       <div className="max-w-4xl mx-auto space-y-12">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-6">
             <Link to="/dashboard" className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl transition-all border border-white/5">
-              <ChevronLeft size={20} />
+              {dir === 'rtl' ? <ChevronLeft className="rotate-180" size={20} /> : <ChevronLeft size={20} />}
             </Link>
             <div>
-              <h1 className="text-3xl font-black tracking-tighter uppercase">Privacy Core</h1>
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Advanced Neural Security Settings (Firebase Cloud Enabled)</p>
+              <h1 className="text-3xl font-black tracking-tighter uppercase">{t('privacyCore')}</h1>
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">{t('privacySubtitle')}</p>
             </div>
           </div>
           {saveStatus && (
             <div className="flex items-center gap-2 text-emerald-400 bg-emerald-400/10 px-4 py-2 rounded-xl border border-emerald-400/20 animate-in fade-in slide-in-from-top-2">
               <CheckCircle size={14} />
-              <span className="text-[10px] font-black uppercase">Cloud Synced</span>
+              <span className="text-[10px] font-black uppercase">{t('cloudSynced')}</span>
             </div>
           )}
         </div>
@@ -155,18 +158,40 @@ const Settings: React.FC = () => {
                </div>
                <div className="mt-2 flex items-center gap-2">
                  <span className="bg-blue-500/10 text-blue-400 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border border-blue-500/20">
-                   {currentUser ? 'Verified Neural Link' : 'Demo Interface'}
+                   {currentUser ? t('verifiedLink') : t('demoInterface')}
                  </span>
                </div>
              </div>
           </div>
 
-          <div className="flex gap-4 relative z-10">
+          <div className="flex flex-col md:flex-row gap-4 relative z-10">
+            <div className="flex-1 p-2 bg-slate-900/50 rounded-2xl border border-white/5 flex items-center justify-between px-4">
+               <div className="flex items-center gap-3">
+                 <Globe size={16} className="text-slate-400" />
+                 <span className="text-xs font-bold uppercase tracking-wider text-slate-400">{t('language')}</span>
+               </div>
+               <div className="flex gap-2">
+                 {(['en', 'fr', 'ar'] as const).map((lang) => (
+                   <button
+                     key={lang}
+                     onClick={() => setLanguage(lang)}
+                     className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase transition-all ${
+                       language === lang 
+                       ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' 
+                       : 'bg-white/5 text-slate-500 hover:bg-white/10'
+                     }`}
+                   >
+                     {lang}
+                   </button>
+                 ))}
+               </div>
+            </div>
+
             <button 
               onClick={handleLogout}
               className="flex-1 py-3 bg-white/5 hover:bg-white/10 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all border border-white/5"
             >
-              <LogOut size={14} /> Log Out
+              <LogOut size={14} /> {t('logOut')}
             </button>
           </div>
         </div>
@@ -178,35 +203,35 @@ const Settings: React.FC = () => {
               <EyeOff size={24} />
             </div>
             <div>
-              <h2 className="text-xl font-black uppercase tracking-tight">Anonymization Layer</h2>
-              <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">Pre-processing for Neural Uplink</p>
+              <h2 className="text-xl font-black uppercase tracking-tight">{t('anonymizationLayer')}</h2>
+              <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">{t('anonymizationSubtitle')}</p>
             </div>
           </div>
 
           <div className="space-y-6">
             <div className="flex items-center justify-between p-6 bg-slate-900/50 rounded-3xl border border-white/5 hover:border-blue-500/30 transition-all">
               <div>
-                <h3 className="text-sm font-bold mb-1">Scrub PII from Vision Analysis</h3>
-                <p className="text-xs text-slate-500 max-w-md">Strips biometric markers and environment metadata before sending frames to Gemini API.</p>
+                <h3 className="text-sm font-bold mb-1">{t('scrubPii')}</h3>
+                <p className="text-xs text-slate-500 max-w-md">{t('scrubPiiDesc')}</p>
               </div>
               <button 
                 onClick={() => toggleSetting('anonymizeAI')}
                 className={`w-14 h-8 rounded-full relative transition-all ${settings.anonymizeAI ? 'bg-blue-600' : 'bg-slate-700'}`}
               >
-                <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-md ${settings.anonymizeAI ? 'left-7' : 'left-1'}`} />
+                <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-md ${settings.anonymizeAI ? (dir === 'rtl' ? 'right-7' : 'left-7') : (dir === 'rtl' ? 'right-1' : 'left-1')}`} />
               </button>
             </div>
 
             <div className="flex items-center justify-between p-6 bg-slate-900/50 rounded-3xl border border-white/5 hover:border-blue-500/30 transition-all">
               <div>
-                <h3 className="text-sm font-bold mb-1">Aggregate Training Consent</h3>
-                <p className="text-xs text-slate-500 max-w-md">Allow anonymized aggregates to be used for model fine-tuning (Differential Privacy enabled).</p>
+                <h3 className="text-sm font-bold mb-1">{t('aggregateConsent')}</h3>
+                <p className="text-xs text-slate-500 max-w-md">{t('aggregateConsentDesc')}</p>
               </div>
               <button 
                 onClick={() => toggleSetting('allowAggregateTraining')}
                 className={`w-14 h-8 rounded-full relative transition-all ${settings.allowAggregateTraining ? 'bg-indigo-600' : 'bg-slate-700'}`}
               >
-                <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-md ${settings.allowAggregateTraining ? 'left-7' : 'left-1'}`} />
+                <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-md ${settings.allowAggregateTraining ? (dir === 'rtl' ? 'right-7' : 'left-7') : (dir === 'rtl' ? 'right-1' : 'left-1')}`} />
               </button>
             </div>
           </div>
@@ -219,16 +244,16 @@ const Settings: React.FC = () => {
               <Lock size={24} />
             </div>
             <div>
-              <h2 className="text-xl font-black uppercase tracking-tight">Encryption Hub</h2>
-              <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">End-to-End Data Persistence</p>
+              <h2 className="text-xl font-black uppercase tracking-tight">{t('encryptionHub')}</h2>
+              <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">{t('encryptionSubtitle')}</p>
             </div>
           </div>
 
           <div className="space-y-4">
             <div className="p-6 bg-slate-900/50 rounded-3xl border border-white/5 space-y-4">
               <div className="flex justify-between items-center">
-                <h3 className="text-sm font-bold">Log Encryption Protocol</h3>
-                <span className="text-[10px] font-black text-magenta-500 uppercase tracking-widest bg-magenta-500/10 px-3 py-1 rounded-lg">Active</span>
+                <h3 className="text-sm font-bold">{t('logEncryption')}</h3>
+                <span className="text-[10px] font-black text-magenta-500 uppercase tracking-widest bg-magenta-500/10 px-3 py-1 rounded-lg">{t('active')}</span>
               </div>
               <div className="grid grid-cols-3 gap-4">
                 {(['Standard', 'AES-256', 'Quantum-Resistant'] as const).map((level) => (
@@ -241,7 +266,7 @@ const Settings: React.FC = () => {
                       : 'bg-white/5 border-transparent text-slate-500 hover:bg-white/10'
                     }`}
                   >
-                    {level}
+                    {level === 'Standard' ? t('standard') : level === 'Quantum-Resistant' ? t('quantum') : level}
                   </button>
                 ))}
               </div>
@@ -254,32 +279,32 @@ const Settings: React.FC = () => {
           <div className="glass-card rounded-[40px] p-10 border border-white/5 shadow-xl space-y-6">
             <div className="flex items-center gap-3">
               <Download className="text-blue-400" size={20} />
-              <h3 className="text-sm font-black uppercase tracking-widest">Export Archive</h3>
+              <h3 className="text-sm font-black uppercase tracking-widest">{t('exportArchive')}</h3>
             </div>
             <p className="text-xs text-slate-500 leading-relaxed">
-              Download a full JSON record of your health events, settings, and AI-generated insights. All data is de-identified before export.
+              {t('exportDesc')}
             </p>
             <button 
               onClick={handleExport}
               className="w-full py-4 bg-white text-slate-950 rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
             >
-              <Download size={14} /> Initialize Download
+              <Download size={14} /> {t('initDownload')}
             </button>
           </div>
 
           <div className="glass-card rounded-[40px] p-10 border border-white/5 shadow-xl space-y-6">
             <div className="flex items-center gap-3">
               <Trash2 className="text-red-500" size={20} />
-              <h3 className="text-sm font-black uppercase tracking-widest text-red-500">The Purge</h3>
+              <h3 className="text-sm font-black uppercase tracking-widest text-red-500">{t('thePurge')}</h3>
             </div>
             <p className="text-xs text-slate-500 leading-relaxed">
-              Permanently wipe all health history, biometric profiles, and predictive logs. This action is irreversible and terminates the neural link.
+              {t('purgeDesc')}
             </p>
             <button 
               onClick={() => setShowConfirmDelete(true)}
               className="w-full py-4 bg-red-500/10 border border-red-500/20 text-red-500 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-red-500/20 transition-all flex items-center justify-center gap-2"
             >
-              <Trash2 size={14} /> Wipe All Data
+              <Trash2 size={14} /> {t('wipeData')}
             </button>
           </div>
         </div>
@@ -292,9 +317,9 @@ const Settings: React.FC = () => {
                 <AlertTriangle size={40} className="animate-pulse" />
               </div>
               <div className="text-center space-y-2">
-                <h4 className="text-2xl font-black uppercase tracking-tighter">Confirm Data Purge</h4>
+                <h4 className="text-2xl font-black uppercase tracking-tighter">{t('confirmPurge')}</h4>
                 <p className="text-xs text-slate-500 font-bold uppercase tracking-widest leading-relaxed">
-                  All biometric history on Firestore will be destroyed. This cannot be undone.
+                  {t('purgeWarning')}
                 </p>
               </div>
               <div className="flex gap-4">
@@ -302,13 +327,13 @@ const Settings: React.FC = () => {
                   onClick={() => setShowConfirmDelete(false)}
                   className="flex-1 py-4 bg-white/5 text-slate-400 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all"
                 >
-                  Cancel
+                  {t('cancel')}
                 </button>
                 <button 
                   onClick={handleDeleteAccount}
                   className="flex-1 py-4 bg-red-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all shadow-xl shadow-red-600/30"
                 >
-                  Confirm Delete
+                  {t('confirmDelete')}
                 </button>
               </div>
             </div>
@@ -318,7 +343,7 @@ const Settings: React.FC = () => {
         {/* Footer Info */}
         <div className="text-center pt-10 pb-20 opacity-30 flex flex-col items-center gap-2">
            <Fingerprint size={24} />
-           <p className="text-[10px] font-black uppercase tracking-[0.4em]">Privacy Protocol V2.4.92 // HIPAA & GDPR Compliant Layer</p>
+           <p className="text-[10px] font-black uppercase tracking-[0.4em]">{t('privacyProtocol')}</p>
         </div>
       </div>
     </div>

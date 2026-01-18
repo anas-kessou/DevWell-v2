@@ -1,19 +1,21 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   ShieldCheck, Users, Activity, MessageCircle, Zap, TrendingUp, AlertTriangle, 
   Terminal, BarChart3, ChevronLeft, Globe, Database, BrainCircuit, RefreshCcw,
-  Lock, EyeOff, Download, ShieldAlert, CheckCircle, Info, Filter, Brain, Key
+  Lock, EyeOff, Download, ShieldAlert, CheckCircle, Info, Filter, Brain, Key, FileText, Wifi
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { 
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell, 
-  AreaChart, Area, CartesianGrid, Legend 
+  AreaChart, Area, CartesianGrid, Legend, PieChart, Pie, LineChart, Line, RadialBarChart, RadialBar
 } from 'recharts';
 import { GeminiService } from '../services/geminiService';
 import { FirebaseService } from '../services/firebaseService';
+import { User as UserIcon } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const AdminAnalytics: React.FC = () => {
+  const { t, dir } = useLanguage();
   const [isAdminAuth, setIsAdminAuth] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
   const [authError, setAuthError] = useState('');
@@ -24,6 +26,22 @@ const AdminAnalytics: React.FC = () => {
   const [activeTab, setActiveTab] = useState('metrics');
   const [noiseEnabled, setNoiseEnabled] = useState(false);
   const [exporting, setExporting] = useState(false);
+  
+  // New States for Features
+  const [profileTab, setProfileTab] = useState<'profile' | 'password'>('profile');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+
+  const [hourlyActivity, setHourlyActivity] = useState<any[]>([]);
+  const [userTiers, setUserTiers] = useState<any[]>([]);
+  const [alertHistogram, setAlertHistogram] = useState<any[]>([]);
+  const [feedbackStats, setFeedbackStats] = useState<any>({ avgRating: "0.0", totalRaters: 0, distribution: {} });
+  const [ticketDistribution, setTicketDistribution] = useState<any[]>([]);
+  const [aiReport, setAiReport] = useState<any>(null);
+  const [generatingReport, setGeneratingReport] = useState(false);
+
   const [realExStats, setRealStats] = useState({
     totalUsers: 0,
     totalFeedback: 0,
@@ -59,6 +77,27 @@ const AdminAnalytics: React.FC = () => {
     const stats = await FirebaseService.getGlobalStats();
     setRealStats(stats);
     
+    // New Data Fetching
+    const [
+      hourly, 
+      tiers, 
+      alerts, 
+      fbStats, 
+      tickets
+    ] = await Promise.all([
+      FirebaseService.getHourlyActivity(),
+      FirebaseService.getUsersByTier(),
+      FirebaseService.getAlertHistogram(),
+      FirebaseService.getFeedbackStats(),
+      FirebaseService.getTicketDistribution()
+    ]);
+
+    setHourlyActivity(hourly);
+    setUserTiers(tiers);
+    setAlertHistogram(alerts);
+    setFeedbackStats(fbStats);
+    setTicketDistribution(tickets);
+
     // 2. Fetch Lists (Events & Feedback)
     const [events, feedback] = await Promise.all([
       FirebaseService.getRecentGlobalEvents(200),
@@ -128,6 +167,56 @@ const AdminAnalytics: React.FC = () => {
     setTrendData(processed);
   };
 
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError('');
+    setPasswordSuccess('');
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError("Passwords do not match");
+      return;
+    }
+
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{12,}$/;
+    if (!passwordRegex.test(newPassword)) {
+      setPasswordError("Password must be at least 12 chars, include uppercase, lowercase, number, and special char.");
+      return;
+    }
+
+    try {
+      // Assuming the admin is currently logged in with Firebase Auth to change password
+      // Since currently we only support token login, this might fail if we don't have a real user session.
+      // We will wrap in try-catch and show error if no auth session exists.
+      if (!FirebaseService.currentUser) {
+         setPasswordError("No active Firebase session. Cannot change password for token-based admin.");
+         return;
+      }
+      
+      // We need the Current Password for re-auth. 
+      // For this demo implementation, we will use the 'passwordInput' state as the 'current' password
+      // assuming the admin entered it to login initially.
+      await FirebaseService.changePassword(passwordInput, newPassword);
+      setPasswordSuccess("Password updated successfully.");
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (e: any) {
+      setPasswordError(e.message || "Failed to update password");
+    }
+  };
+
+  const handleGenerateAIReport = async () => {
+    setGeneratingReport(true);
+    try {
+      const allFeedback = await FirebaseService.getAllFeedbackRaw();
+      const allTickets = await FirebaseService.getAllTicketsRaw();
+      const report = await GeminiService.analyzeFeedbackAndSuggestions(allFeedback, allTickets);
+      setAiReport(report);
+    } catch (e) {
+      console.error("Report generation failed:", e);
+    }
+    setGeneratingReport(false);
+  };
+
 
   // Login Screen
   if (!isAdminAuth) {
@@ -144,8 +233,8 @@ const AdminAnalytics: React.FC = () => {
             </div>
             
             <div className="text-center space-y-2">
-              <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Admin Restricted</h2>
-              <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">Enter security token to proceed</p>
+              <h2 className="text-2xl font-black text-white uppercase tracking-tighter">{t('admin.accessRequired')}</h2>
+              <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">{t('admin.enterPassword')}</p>
             </div>
 
             <form onSubmit={handleAdminLogin} className="space-y-4">
@@ -163,7 +252,7 @@ const AdminAnalytics: React.FC = () => {
                 {authError && (
                   <div className="flex items-center gap-2 text-red-500 text-[10px] font-bold uppercase tracking-widest animate-pulse">
                     <ShieldAlert size={12} />
-                    {authError}
+                    {t('admin.invalidPassword')}
                   </div>
                 )}
               </div>
@@ -171,7 +260,7 @@ const AdminAnalytics: React.FC = () => {
                 type="submit"
                 className="w-full bg-cyan-600 hover:bg-cyan-500 text-white py-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-95"
               >
-                Authenticate
+                {t('admin.accessButton')}
               </button>
             </form>
           </div>
@@ -218,19 +307,19 @@ const AdminAnalytics: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-black text-slate-100 font-mono scrollbar-hide">
+    <div className="min-h-screen bg-black text-slate-100 font-mono scrollbar-hide" dir={dir}>
       {/* Header */}
       <header className="border-b border-cyan-900/30 bg-black/80 backdrop-blur-xl sticky top-0 z-50 px-10 py-6 flex items-center justify-between">
         <div className="flex items-center gap-6">
           <Link to="/dashboard" className="p-2 hover:bg-white/5 rounded-xl transition-colors">
-            <ChevronLeft size={20} className="text-slate-500" />
+            <ChevronLeft size={20} className={`text-slate-500 ${dir === 'rtl' ? 'rotate-180' : ''}`} />
           </Link>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-cyan-600/20 rounded-lg flex items-center justify-center border border-cyan-500/30">
               <ShieldCheck size={24} className="text-cyan-500" />
             </div>
             <div>
-              <h1 className="text-lg font-black tracking-widest text-white uppercase">Neural Command Layer</h1>
+              <h1 className="text-lg font-black tracking-widest text-white uppercase">{t('admin.title')}</h1>
               <p className="text-[10px] text-cyan-500/60 font-bold uppercase tracking-widest">Platform Root v2.1.0 // Privacy Guard: {noiseEnabled ? 'ACTIVE' : 'OFF'}</p>
             </div>
           </div>
@@ -238,7 +327,7 @@ const AdminAnalytics: React.FC = () => {
 
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2 bg-slate-900 px-3 py-1.5 rounded-lg border border-white/5">
-            <span className="text-[9px] font-black uppercase text-slate-500">Noise Injection</span>
+            <span className="text-[9px] font-black uppercase text-slate-500">{t('admin.noiseInjection')}</span>
             <button 
               onClick={() => setNoiseEnabled(!noiseEnabled)}
               className={`w-10 h-5 rounded-full relative transition-all ${noiseEnabled ? 'bg-cyan-500' : 'bg-slate-700'}`}
@@ -248,7 +337,7 @@ const AdminAnalytics: React.FC = () => {
           </div>
           <div className="flex items-center gap-3 bg-cyan-500/5 px-4 py-2 rounded-xl border border-cyan-500/20">
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.5)]" />
-            <span className="text-[10px] font-black text-cyan-400">ENCRYPTED UPLINK</span>
+            <span className="text-[10px] font-black text-cyan-400">{t('admin.encryptedUplink')}</span>
           </div>
         </div>
       </header>
@@ -257,10 +346,13 @@ const AdminAnalytics: React.FC = () => {
         {/* Navigation Sidebar */}
         <aside className="lg:col-span-3 space-y-4">
           {[
-            { id: 'metrics', label: 'Biometric Metrics', icon: <Activity size={18} /> },
-            { id: 'sentiment', label: 'Neural Sentiment', icon: <BrainCircuit size={18} /> },
-            { id: 'privacy', label: 'Privacy & Ethics', icon: <Lock size={18} /> },
-            { id: 'raw', label: 'Direct Logs', icon: <Terminal size={18} /> }
+            { id: 'metrics', label: t('admin.metrics'), icon: <Activity size={18} /> },
+            { id: 'analytics', label: t('admin.analytics'), icon: <BarChart3 size={18} /> },
+            { id: 'ai-reports', label: t('admin.aiFeedback'), icon: <Brain size={18} /> },
+            { id: 'sentiment', label: t('admin.neuralSentiment'), icon: <BrainCircuit size={18} /> },
+            { id: 'privacy', label: t('admin.privacyEthics'), icon: <Lock size={18} /> },
+            { id: 'profile', label: t('admin.adminProfile'), icon: <UserIcon size={18} /> },
+            { id: 'raw', label: t('admin.directLogs'), icon: <Terminal size={18} /> }
           ].map(item => (
             <button 
               key={item.id}
@@ -277,7 +369,7 @@ const AdminAnalytics: React.FC = () => {
 
           <div className="mt-12 p-8 bg-slate-900/30 rounded-[40px] border border-white/5 space-y-8">
              <div>
-                <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-6">Anonymity Meter</h4>
+                <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-6">{t('admin.anonymityMeter')}</h4>
                 <div className="relative w-32 h-32 mx-auto mb-4">
                    <svg className="w-full h-full transform -rotate-90">
                      <circle cx="64" cy="64" r="58" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-slate-800" />
@@ -287,7 +379,7 @@ const AdminAnalytics: React.FC = () => {
                      <span className="text-2xl font-black">{audit?.safetyScore || 0}%</span>
                    </div>
                 </div>
-                <p className="text-[10px] text-center font-bold text-cyan-500/60 uppercase">{audit?.riskLevel || 'Computing Risk...'}</p>
+                <p className="text-[10px] text-center font-bold text-cyan-500/60 uppercase">{audit?.riskLevel || t('admin.computingRisk')}</p>
              </div>
 
              <div className="space-y-4">
@@ -297,7 +389,7 @@ const AdminAnalytics: React.FC = () => {
                   className="w-full bg-white text-slate-950 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all"
                 >
                   {exporting ? <RefreshCcw size={14} className="animate-spin" /> : <Download size={14} />}
-                  Export Fine-Tuning Set
+                  {t('admin.exportSet')}
                 </button>
              </div>
           </div>
@@ -310,10 +402,10 @@ const AdminAnalytics: React.FC = () => {
               {/* KPI Matrix */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
                 {[
-                  { label: 'Total Users', value: globalData.totalUsers, icon: <Users className="text-cyan-400" />, trend: 'Live' },
-                  { label: 'Health Events', value: globalData.totalEvents, icon: <Activity className="text-magenta-400" />, trend: 'Aggregated' },
-                  { label: 'Support Tickets', value: globalData.totalTickets, icon: <ShieldAlert className="text-yellow-400" />, trend: 'Pending' },
-                  { label: 'Total Feedback', value: globalData.totalFeedback, icon: <MessageCircle className="text-green-400" />, trend: 'Received' }
+                  { label: t('admin.totalUsers'), value: globalData.totalUsers, icon: <Users className="text-cyan-400" />, trend: t('admin.live') },
+                  { label: t('admin.healthEvents'), value: globalData.totalEvents, icon: <Activity className="text-magenta-400" />, trend: t('admin.aggregated') },
+                  { label: t('admin.supportTickets'), value: globalData.totalTickets, icon: <ShieldAlert className="text-yellow-400" />, trend: t('admin.pending') },
+                  { label: t('admin.totalFeedback'), value: globalData.totalFeedback, icon: <MessageCircle className="text-green-400" />, trend: t('admin.received') }
                 ].map((kpi, i) => (
                   <div key={i} className="bg-slate-900/30 p-8 rounded-[32px] border border-white/5 relative overflow-hidden group">
                     <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:opacity-40 transition-opacity">{kpi.icon}</div>
@@ -328,17 +420,17 @@ const AdminAnalytics: React.FC = () => {
               <div className="bg-slate-900/30 p-10 rounded-[40px] border border-white/5">
                 <div className="flex items-center justify-between mb-12">
                    <div>
-                      <h3 className="text-lg font-black uppercase tracking-tighter">Aggregated Fatigue Trend</h3>
-                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">7-Day Biometric Oscillation</p>
+                      <h3 className="text-lg font-black uppercase tracking-tighter">{t('admin.aggregatedTrend')}</h3>
+                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{t('admin.oscillation')}</p>
                    </div>
                    <div className="flex gap-4">
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 bg-cyan-500 rounded-full" />
-                        <span className="text-[10px] font-bold text-slate-400 uppercase">Alerts</span>
+                        <span className="text-[10px] font-bold text-cyan-400 uppercase">{t('admin.alerts')}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 bg-magenta-500 rounded-full" />
-                        <span className="text-[10px] font-bold text-slate-400 uppercase">Stress</span>
+                        <span className="text-[10px] font-bold text-magenta-400 uppercase">{t('admin.stress')}</span>
                       </div>
                    </div>
                 </div>
@@ -363,6 +455,317 @@ const AdminAnalytics: React.FC = () => {
                   </ResponsiveContainer>
                 </div>
               </div>
+            </div>
+          )}
+
+          {activeTab === 'analytics' && (
+             <div className="animate-in slide-in-from-right-10 duration-500 space-y-8">
+               
+               {/* Activity & Users Grid */}
+               <div className="grid md:grid-cols-2 gap-8">
+                 {/* 24h Activity Area */}
+                 <div className="bg-slate-900/30 p-8 rounded-[40px] border border-white/5 relative overflow-hidden">
+                    <h3 className="text-lg font-black uppercase tracking-tighter mb-6 relative z-10">{t('admin.systemActivity24h')}</h3>
+                    <div className="h-[250px] w-full relative z-10">
+                      <ResponsiveContainer>
+                        <AreaChart data={hourlyActivity}>
+                          <defs>
+                             <linearGradient id="colorActive" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                             </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
+                          <XAxis dataKey="hour" axisLine={false} tickLine={false} tick={{fill:'#64748b', fontSize:10}} />
+                          <Tooltip contentStyle={{background:'#0f172a', border:'1px solid #1e293b'}} />
+                          <Area type="monotone" dataKey="activeUsers" stroke="#3b82f6" fillOpacity={1} fill="url(#colorActive)" />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                 </div>
+
+                 {/* User Tiers Line */}
+                 <div className="bg-slate-900/30 p-8 rounded-[40px] border border-white/5 relative overflow-hidden">
+                    <h3 className="text-lg font-black uppercase tracking-tighter mb-6 relative z-10">{t('admin.tierGrowth')}</h3>
+                    <div className="h-[250px] w-full relative z-10">
+                      <ResponsiveContainer>
+                        <LineChart data={userTiers}>
+                           <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
+                           <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill:'#64748b', fontSize:10}} />
+                           <Tooltip contentStyle={{background:'#0f172a', border:'1px solid #1e293b'}} />
+                           <Legend />
+                           <Line type="monotone" dataKey="free" stroke="#94a3b8" name={t('admin.simpleUsers')} strokeWidth={2} dot={false} />
+                           <Line type="monotone" dataKey="zinPro" stroke="#f472b6" name={t('admin.zenPro')} strokeWidth={3} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                 </div>
+               </div>
+
+               {/* Alerts & Ratings Grid */}
+               <div className="grid md:grid-cols-3 gap-8">
+                   {/* Alert Histogram */}
+                  <div className="md:col-span-2 bg-slate-900/30 p-8 rounded-[40px] border border-white/5">
+                     <h3 className="text-lg font-black uppercase tracking-tighter mb-6">{t('admin.alertHistogram')}</h3>
+                     <div className="h-[250px] w-full">
+                       <ResponsiveContainer>
+                         <BarChart data={alertHistogram}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" vertical={false} />
+                            <XAxis dataKey="range" axisLine={false} tickLine={false} tick={{fill:'#64748b', fontSize:10}} label={{ value: t('admin.alertsPerUser'), position: 'insideBottom', dy: 10, fill: '#64748b', fontSize: 10 }} />
+                            <YAxis axisLine={false} tickLine={false} tick={{fill:'#64748b', fontSize:10}} label={{ value: t('admin.userCount'), angle: -90, position: 'insideLeft', fill: '#64748b', fontSize: 10 }} />
+                            <Tooltip cursor={{fill: 'transparent'}} contentStyle={{background:'#0f172a', border:'1px solid #1e293b'}} />
+                            <Bar dataKey="count" fill="#f59e0b" radius={[4,4,0,0]} />
+                         </BarChart>
+                       </ResponsiveContainer>
+                     </div>
+                  </div>
+
+                  {/* Rating Radial */}
+                  <div className="bg-slate-900/30 p-8 rounded-[40px] border border-white/5 flex flex-col items-center justify-center text-center">
+                     <h3 className="text-lg font-black uppercase tracking-tighter mb-2">{t('admin.userSatisfaction')}</h3>
+                     <div className="relative w-40 h-40 my-4 flex items-center justify-center">
+                         <div className="text-4xl font-black text-cyan-400">{feedbackStats.avgRating}</div>
+                     </div>
+                     <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">{feedbackStats.totalRaters} {t('admin.reviewers')}</p>                     <div className="w-full mt-6 space-y-2">
+                        {[5,4,3,2,1].map(r => (
+                           <div key={r} className="flex items-center gap-2 text-[10px]">
+                              <span className="w-4">{r}★</span>
+                              <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                                 <div 
+                                    className="h-full bg-cyan-500" 
+                                    style={{width: `${(feedbackStats.distribution[r] / feedbackStats.totalRaters * 100) || 0}%`}} 
+                                 />
+                              </div>
+                           </div>
+                        ))}
+                     </div>
+                  </div>
+               </div>
+
+               {/* Combined Support & System View */}
+               <div className="grid md:grid-cols-2 gap-8">
+                  <div className="bg-slate-900/30 p-8 rounded-[40px] border border-white/5">
+                     <h3 className="text-lg font-black uppercase tracking-tighter mb-6">{t('admin.ticketDist')}</h3>
+                     <div className="h-[300px] w-full flex items-center justify-center">
+                        <ResponsiveContainer>
+                           <PieChart>
+                              <Pie
+                                 data={ticketDistribution}
+                                 cx="50%"
+                                 cy="50%"
+                                 innerRadius={60}
+                                 outerRadius={100}
+                                 paddingAngle={5}
+                                 dataKey="value"
+                              >
+                                {ticketDistribution.map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={['#06b6d4', '#ec4899', '#f59e0b', '#8b5cf6'][index % 4]} />
+                                ))}
+                              </Pie>
+                              <Tooltip contentStyle={{background:'#0f172a', border:'1px solid #1e293b'}} />
+                              <Legend verticalAlign="bottom" height={36}/>
+                           </PieChart>
+                        </ResponsiveContainer>
+                     </div>
+                  </div>
+                  
+                   {/* "Combined Data for Simple AI Training" Visualization */}
+                  <div className="bg-slate-900/30 p-8 rounded-[40px] border border-white/5 relative overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-br from-cyan-900/20 to-magenta-900/20" />
+                      <div className="relative z-10 h-full flex flex-col justify-between">
+                         <div>
+                            <h3 className="text-lg font-black uppercase tracking-tighter mb-2">{t('admin.omniMetric')}</h3>
+                            <p className="text-xs text-slate-400 font-bold max-w-sm">{t('admin.unifiedView')}</p>
+                         </div>
+                         <div className="h-[200px] w-full mt-4">
+                           {/* Using ScatterChart simulated with customized shape or simple svg for unique viz */}
+                           <div className="w-full h-full border border-dashed border-white/20 rounded-2xl flex items-center justify-center relative">
+                               <div className="absolute inset-0 flex items-center justify-center">
+                                  <div className="w-32 h-32 bg-cyan-500/20 rounded-full blur-xl animate-pulse" />
+                               </div>
+                               <div className="grid grid-cols-2 gap-8 text-center">
+                                  <div>
+                                     <div className="text-2xl font-black text-white">{realExStats.totalEvents}</div>
+                                     <div className="text-[9px] uppercase tracking-widest text-cyan-400">{t('admin.totalEventsLabel')}</div>
+                                  </div>
+                                  <div>
+                                     <div className="text-2xl font-black text-white">{feedbackStats.avgRating}</div>
+                                     <div className="text-[9px] uppercase tracking-widest text-magenta-400">{t('admin.avgQuality')}</div>
+                                  </div>
+                               </div>
+                               <div className="absolute bottom-4 text-[9px] text-slate-500 font-mono">
+                                  {t('admin.vectorReady')}
+                               </div>
+                           </div>
+                        </div>
+                   </div>
+                  </div>
+
+               </div>
+             </div>
+          )}
+
+          {activeTab === 'ai-reports' && (
+             <div className="animate-in slide-in-from-right-10 duration-500 space-y-8">
+                <div className="bg-gradient-to-r from-cyan-900/20 to-purple-900/20 p-10 rounded-[40px] border border-white/10 flex items-center justify-between">
+                   <div>
+                      <h3 className="text-2xl font-black uppercase tracking-tighter text-white mb-2">AI Feedback Analyst</h3>
+                      <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Generate comprehensive reports from user feedback loops</p>
+                   </div>
+                   <button 
+                      onClick={handleGenerateAIReport}
+                      disabled={generatingReport}
+                      className="px-8 py-4 bg-white text-black rounded-2xl font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all flex items-center gap-3"
+                   >
+                      {generatingReport ? <RefreshCcw className="animate-spin" size={20} /> : <BrainCircuit size={20} />}
+                      {generatingReport ? "Analyzing..." : "Generate New Report"}
+                   </button>
+                </div>
+
+                {aiReport && (
+                   <div className="grid md:grid-cols-12 gap-8 animate-in fade-in slide-in-from-bottom-5 duration-700">
+                      {/* Summary Card */}
+                      <div className="md:col-span-8 bg-slate-900/50 p-8 rounded-[40px] border border-white/5 backdrop-blur-sm">
+                         <div className="flex items-center gap-3 mb-6">
+                            <div className="w-10 h-10 bg-cyan-500/20 rounded-lg flex items-center justify-center">
+                               <FileText className="text-cyan-400" size={20} />
+                            </div>
+                            <h4 className="text-lg font-black uppercase tracking-tighter">Executive Summary</h4>
+                         </div>
+                         <p className="text-sm leading-8 text-slate-300 font-medium">
+                            {aiReport.summary}
+                         </p>
+                         
+                         <div className="mt-8 grid grid-cols-2 gap-4">
+                            <div className="bg-white/5 p-6 rounded-3xl">
+                               <h5 className="text-[10px] uppercase tracking-widest text-slate-500 mb-4">Detected Trend</h5>
+                               <div className="text-xl font-black text-cyan-400">{aiReport.trend}</div>
+                            </div>
+                            <div className="bg-white/5 p-6 rounded-3xl">
+                               <h5 className="text-[10px] uppercase tracking-widest text-slate-500 mb-4">Sentiment Balance</h5>
+                               <div className="flex items-end gap-2 h-10">
+                                  <div className="w-1/3 bg-green-500 rounded-t-lg" style={{height: `${(aiReport.sentimentBreakdown?.positive || 1) * 2}px`}} />
+                                  <div className="w-1/3 bg-slate-500 rounded-t-lg" style={{height: `${(aiReport.sentimentBreakdown?.neutral || 1) * 2}px`}} />
+                                  <div className="w-1/3 bg-red-500 rounded-t-lg" style={{height: `${(aiReport.sentimentBreakdown?.negative || 1) * 2}px`}} />
+                               </div>
+                            </div>
+                         </div>
+                      </div>
+
+                      {/* Issues & Suggestions */}
+                      <div className="md:col-span-4 space-y-6">
+                         <div className="bg-red-500/10 p-8 rounded-[40px] border border-red-500/20">
+                            <h4 className="text-sm font-black uppercase tracking-wide text-red-400 mb-4">Top Issues</h4>
+                            <ul className="space-y-3">
+                               {aiReport.topIssues?.map((issue: string, i: number) => (
+                                  <li key={i} className="flex gap-3 text-xs text-red-200 font-bold">
+                                     <span className="opacity-50">{i+1}.</span>
+                                     {issue}
+                                  </li>
+                               ))}
+                            </ul>
+                         </div>
+                         <div className="bg-green-500/10 p-8 rounded-[40px] border border-green-500/20">
+                            <h4 className="text-sm font-black uppercase tracking-wide text-green-400 mb-4">Feature Requests</h4>
+                            <ul className="space-y-3">
+                               {aiReport.suggestions?.map((item: string, i: number) => (
+                                  <li key={i} className="flex gap-3 text-xs text-green-200 font-bold">
+                                     <span className="opacity-50">{i+1}.</span>
+                                     {item}
+                                  </li>
+                               ))}
+                            </ul>
+                         </div>
+                      </div>
+                      
+                      {/* Action Items Full Width */}
+                      <div className="md:col-span-12 bg-white/5 p-8 rounded-[40px] border border-white/5 border-l-4 border-l-cyan-500">
+                          <h4 className="text-sm font-black uppercase tracking-wide text-white mb-6">Strategic Action Items</h4>
+                          <div className="grid md:grid-cols-3 gap-4">
+                             {aiReport.actionItems?.map((item: string, i: number) => (
+                                <div key={i} className="p-4 bg-black/40 rounded-2xl text-xs font-mono text-cyan-300">
+                                   &gt; {item}
+                                </div>
+                             ))}
+                          </div>
+                      </div>
+                   </div>
+                )}
+             </div>
+          )}
+
+          {activeTab === 'profile' && (
+            <div className="max-w-xl mx-auto animate-in slide-in-from-right-10 duration-500">
+               <div className="bg-slate-900/30 p-10 rounded-[40px] border border-white/5 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-32 bg-cyan-500/5 blur-[100px] rounded-full" />
+                  
+                  <div className="relative z-10">
+                     <div className="flex justify-center mb-8">
+                        <div className="w-24 h-24 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-3xl flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                           <UserIcon size={40} className="text-white" />
+                        </div>
+                     </div>
+                     
+                     <h3 className="text-2xl font-black text-center text-white uppercase tracking-tighter mb-2">Admin Security Profile</h3>
+                     <p className="text-center text-xs text-slate-500 font-bold uppercase tracking-widest mb-10">Update credentials and access keys</p>
+
+                     <form onSubmit={handlePasswordChange} className="space-y-6">
+                        <div className="space-y-2">
+                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Current Password</label>
+                           <input 
+                             type="password"
+                             disabled
+                             value="••••••••••••••" 
+                             className="w-full bg-black/50 border border-white/10 rounded-2xl px-6 py-4 text-slate-500 text-sm font-mono cursor-not-allowed opacity-50"
+                           />
+                           <p className="text-[9px] text-slate-600 px-4">Current session authenticated via secure token.</p>
+                        </div>
+
+                        <div className="space-y-2">
+                           <label className="text-[10px] font-black text-white uppercase tracking-widest ml-4">New Strong Password</label>
+                           <input 
+                             type="password"
+                             value={newPassword}
+                             onChange={(e) => setNewPassword(e.target.value)}
+                             className="w-full bg-black/50 border border-white/10 rounded-2xl px-6 py-4 text-white placeholder:text-slate-700 focus:outline-none focus:border-cyan-500/50 transition-all font-mono text-sm"
+                             placeholder="Min 12 chars, Upper, Lower, Special..."
+                           />
+                        </div>
+
+                        <div className="space-y-2">
+                           <label className="text-[10px] font-black text-white uppercase tracking-widest ml-4">Confirm New Password</label>
+                           <input 
+                             type="password"
+                             value={confirmPassword}
+                             onChange={(e) => setConfirmPassword(e.target.value)}
+                             className="w-full bg-black/50 border border-white/10 rounded-2xl px-6 py-4 text-white placeholder:text-slate-700 focus:outline-none focus:border-cyan-500/50 transition-all font-mono text-sm"
+                             placeholder="Re-enter password"
+                           />
+                        </div>
+
+                        {passwordError && (
+                           <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-start gap-3">
+                              <ShieldAlert className="text-red-500 shrink-0 mt-0.5" size={16} />
+                              <p className="text-[10px] font-bold text-red-400">{passwordError}</p>
+                           </div>
+                        )}
+
+                        {passwordSuccess && (
+                           <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-2xl flex items-center gap-3">
+                              <CheckCircle className="text-green-500 shrink-0" size={16} />
+                              <p className="text-[10px] font-bold text-green-400">{passwordSuccess}</p>
+                           </div>
+                        )}
+
+                        <button 
+                           type="submit"
+                           className="w-full bg-white hover:bg-slate-200 text-slate-950 py-5 rounded-2xl text-xs font-black uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-95 mt-4"
+                        >
+                           Update Credentials
+                        </button>
+                     </form>
+                  </div>
+               </div>
             </div>
           )}
 

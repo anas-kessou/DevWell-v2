@@ -1,12 +1,14 @@
 import React, { useMemo } from 'react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { HealthEvent, EventType, Severity } from '../types';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface Props {
   events?: HealthEvent[];
 }
 
 const ActivityChart: React.FC<Props> = ({ events = [] }) => {
+  const { t } = useLanguage();
   const { data, score } = useMemo(() => {
     // Start with perfect stats (100) or 0 if that's the requested "start" state
     // but usually stats start perfect and drop with alerts.
@@ -54,14 +56,14 @@ const ActivityChart: React.FC<Props> = ({ events = [] }) => {
   }, [events]);
 
   return (
-    <div className="bg-slate-900 border border-white/5 rounded-[32px] p-8 h-full flex flex-col">
+    <div className="bg-slate-900 border border-white/5 rounded-[32px] p-8 flex flex-col">
       <h3 className="text-lg font-black uppercase mb-6 flex items-center gap-2">
         <span className="w-2 h-2 rounded-full bg-blue-500" />
-        Neural Balance
+        {t('components.activityChart.title')}
       </h3>
-      <div className="flex-1 w-full min-h-[300px]">
+      <div className="w-full h-[200px]">
         <ResponsiveContainer width="100%" height="100%">
-          <RadarChart cx="50%" cy="50%" outerRadius="80%" data={data}>
+          <RadarChart cx="50%" cy="50%" outerRadius="70%" data={data}>
             <PolarGrid stroke="#334155" />
             <PolarAngleAxis dataKey="subject" tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 'bold' }} />
             <PolarRadiusAxis angle={30} domain={[0, 150]} tick={false} axisLine={false} />
@@ -88,9 +90,9 @@ const ActivityChart: React.FC<Props> = ({ events = [] }) => {
         </ResponsiveContainer>
       </div>
       <div className="mt-4 flex items-center justify-between text-xs text-slate-500 font-bold uppercase tracking-wider">
-        <span>Optimization</span>
+        <span>{t('components.activityChart.optimization')}</span>
         <span className={`text-${score > 80 ? 'emerald' : score > 50 ? 'yellow' : 'red'}-400`}>
-          {score}% Optimal
+          {score}% {t('components.activityChart.optimal')}
         </span>
       </div>
     </div>

@@ -1,20 +1,22 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   MessageSquare, X, Send, Volume2, VolumeX, BrainCircuit, 
-  Mic, MicOff, Waves, Brain, Search, ExternalLink, Activity 
+  Mic, MicOff, Waves, Brain, Search, ExternalLink, Activity, Plus 
 } from 'lucide-react';
 import { GeminiService } from '../services/geminiService';
 import { CameraMonitorHandle } from './CameraMonitor';
 import { HealthEvent } from '../types';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface Props {
   isADHDMode?: boolean;
   healthEvents?: HealthEvent[];
   cameraRef?: React.RefObject<CameraMonitorHandle>;
+  voiceEnabled?: boolean;
 }
 
-const ChatbotWidget: React.FC<Props> = ({ isADHDMode = false, healthEvents = [], cameraRef }) => {
+const ChatbotWidget: React.FC<Props> = ({ isADHDMode = false, healthEvents = [], cameraRef, voiceEnabled = false }) => {
+  const { t, language } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<{
@@ -23,15 +25,19 @@ const ChatbotWidget: React.FC<Props> = ({ isADHDMode = false, healthEvents = [],
     sources?: any[], 
     image?: string,
     vocalWellness?: { observation: string, recommendation: string, stressLevel: string }
-  }[]>([
-    { role: 'bot', text: 'Neural Interface Active. How can I optimize your wellness parameters?' }
-  ]);
+  }[]>([]);
+
+  useEffect(() => {
+    setMessages([
+      { role: 'bot', text: t('components.chatbot.initial') }
+    ]);
+  }, [language]);
+  
   const [loading, setLoading] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [useThinking, setUseThinking] = useState(false);
   const [useSearch, setUseSearch] = useState(false);
-  const [autoSpeech, setAutoSpeech] = useState(true);
   const [audioLevels, setAudioLevels] = useState<number[]>(new Array(12).fill(10));
   
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -40,6 +46,9 @@ const ChatbotWidget: React.FC<Props> = ({ isADHDMode = false, healthEvents = [],
   const animationFrameRef = useRef<number | null>(null);
   const audioProcessorRef = useRef<ScriptProcessorNode | null>(null);
   const audioDataRef = useRef<Int16Array[]>([]);
+
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -127,7 +136,7 @@ const ChatbotWidget: React.FC<Props> = ({ isADHDMode = false, healthEvents = [],
       audioDataRef.current = [];
     }
 
-    if ((!input.trim() && !capturedAudio) || loading) return;
+    if ((!input.trim() && !capturedAudio && !selectedFile) || loading) return;
 
     const userMsg = input.trim();
     let audioBase64 = undefined;
@@ -138,10 +147,20 @@ const ChatbotWidget: React.FC<Props> = ({ isADHDMode = false, healthEvents = [],
       audioBase64 = btoa(binary);
     }
 
+    let displayText = userMsg;
+    if (selectedFile) {
+        displayText = displayText ? `${displayText}\n[Attached: ${selectedFile.name}]` : `[Attached: ${selectedFile.name}]`;
+    } else if (!displayText && audioBase64) {
+        displayText = "Vocal stress profile captured...";
+    } else if (!displayText) {
+        displayText = "Uplinking...";
+    }
+
     setInput('');
+    setSelectedFile(null);
     setMessages(prev => [...prev, { 
       role: 'user', 
-      text: userMsg || (audioBase64 ? "Vocal stress profile captured..." : "Uplinking...")
+      text: displayText
     }]);
     setLoading(true);
 
@@ -178,8 +197,9 @@ const ChatbotWidget: React.FC<Props> = ({ isADHDMode = false, healthEvents = [],
 
       setMessages(prev => [...prev, { role: 'bot', text: responseText, sources, vocalWellness }]);
       
-      // Auto-speak response if autoSpeech enabled or voice interaction used
-      if (audioBase64 || autoSpeech) {
+            
+      // Auto-speak response if voice enabled or voice interaction used
+      if (audioBase64 || voiceEnabled) {
         speakText(responseText);
       }
     } catch (err) {
@@ -203,6 +223,12 @@ const ChatbotWidget: React.FC<Props> = ({ isADHDMode = false, healthEvents = [],
       console.error("Speaking failed", e);
     } finally {
       setIsSpeaking(false);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile(e.target.files[0]);
     }
   };
 
@@ -330,38 +356,70 @@ const ChatbotWidget: React.FC<Props> = ({ isADHDMode = false, healthEvents = [],
                >
                  <Search size={14} className="inline mr-2" /> Research
                </button>
-               <button 
-                onClick={() => setAutoSpeech(!autoSpeech)}
-                className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${autoSpeech ? 'bg-purple-500 text-slate-950 shadow-lg shadow-purple-500/20' : 'bg-white/5 text-slate-400 hover:bg-white/10'}`}
-               >
-                 {autoSpeech ? <Volume2 size={14} className="inline mr-2" /> : <VolumeX size={14} className="inline mr-2" />} Voice
-               </button>
             </div>
             
             <div className="flex gap-3">
-              <button 
-                onMouseDown={startRecording}
-                onMouseUp={stopRecording}
-                onMouseLeave={isRecording ? stopRecording : undefined}
-                className={`p-4 rounded-2xl transition-all ${isRecording ? 'bg-red-600 text-white scale-110 shadow-2xl shadow-red-600/40' : 'bg-white/5 text-slate-400 hover:text-white'}`}
-                title="Hold to record voice for analysis"
-              >
-                {isRecording ? <MicOff size={22} /> : <Mic size={22} />}
-              </button>
-              
               <input 
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                placeholder="Message the Oracle..."
-                className="flex-1 bg-white/5 border-none rounded-2xl px-6 py-4 text-sm focus:ring-2 focus:ring-blue-500 transition-all text-white placeholder-slate-600"
+                 type="file"
+                 ref={fileInputRef}
+                 className="hidden"
+                 onChange={handleFileSelect}
               />
+
+              <div className="relative flex-1">
+                 {selectedFile && (
+                    <div className="absolute bottom-full left-0 mb-2 w-full flex items-center justify-between bg-white/10 p-2 px-3 rounded-xl border border-white/5 animate-in slide-in-from-bottom-2 backdrop-blur-md">
+                      <div className="flex items-center gap-2 overflow-hidden">
+                        <div className="w-6 h-6 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                          <span className="text-[9px] font-bold text-blue-400 uppercase">{selectedFile.name.split('.').pop()}</span>
+                        </div>
+                        <span className="text-[10px] text-white truncate max-w-[140px]">{selectedFile.name}</span>
+                      </div>
+                      <button onClick={() => setSelectedFile(null)} className="p-1 hover:bg-white/10 rounded-full transition-colors">
+                        <X size={12} className="text-slate-400" />
+                      </button>
+                    </div>
+                  )}
+
+                <input 
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                  placeholder="Message the Oracle..."
+                  className="w-full bg-white/5 border-none rounded-2xl pl-6 pr-12 py-4 text-sm focus:ring-2 focus:ring-blue-500 transition-all text-white placeholder-slate-600"
+                />
+                <button 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-2 rounded-xl hover:bg-white/10 transition-all"
+                  title="Upload file"
+                >
+                  <Plus size={20} />
+                </button>
+              </div>
+
               <button 
                 onClick={handleSend}
-                disabled={loading || (!input.trim() && !isRecording && audioDataRef.current.length === 0)}
+                disabled={loading || (!input.trim() && !isRecording && audioDataRef.current.length === 0 && !selectedFile)}
                 className="bg-blue-600 text-white p-4 rounded-2xl hover:bg-blue-700 transition-all disabled:opacity-30 shadow-xl shadow-blue-600/30"
               >
                 <Send size={22} />
+              </button>
+            </div>
+
+            <div className="mt-4">
+              <input 
+                type="file"
+                accept="audio/*"
+                onChange={handleFileSelect}
+                ref={fileInputRef}
+                className="hidden"
+              />
+              <button 
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full py-3 rounded-2xl bg-white/5 text-slate-400 hover:bg-white/10 transition-all flex items-center justify-center gap-2"
+              >
+                <Plus size={16} />
+                <span className="text-sm font-black uppercase tracking-widest">Upload Audio File</span>
               </button>
             </div>
           </div>

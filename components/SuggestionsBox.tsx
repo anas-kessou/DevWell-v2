@@ -2,26 +2,28 @@
 import React, { useMemo } from 'react';
 import { Sparkles, Coffee, Eye, Move, Zap } from 'lucide-react';
 import { HealthEvent, Severity } from '../types';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface Props {
   events: HealthEvent[];
 }
 
 const SuggestionsBox: React.FC<Props> = ({ events }) => {
+  const { t } = useLanguage();
   const latestEvent = events[0];
   
   const advice = useMemo(() => {
     if (!latestEvent) return {
-      title: "Doing Great!",
-      message: "Keep up the flow. Remember to hydrate every hour.",
+      title: t('components.suggestions.great.title'),
+      message: t('components.suggestions.great.message'),
       icon: <Sparkles className="text-yellow-500" />,
       color: "bg-yellow-50 border-yellow-100"
     };
 
     if (latestEvent.severity === Severity.HIGH) {
       return {
-        title: "Immediate Break Required",
-        message: "Your fatigue levels are high. Take a 15-minute walk or rest your eyes now.",
+        title: t('components.suggestions.break.title'),
+        message: t('components.suggestions.break.message'),
         icon: <Zap className="text-red-500" />,
         color: "bg-red-50 border-red-100 dark:bg-red-900/20 dark:border-red-800"
       };
@@ -29,20 +31,20 @@ const SuggestionsBox: React.FC<Props> = ({ events }) => {
 
     if (latestEvent.severity === Severity.MEDIUM) {
       return {
-        title: "Try the 20-20-20 Rule",
-        message: "Every 20 minutes, look at something 20 feet away for 20 seconds.",
+        title: t('components.suggestions.rule20.title'),
+        message: t('components.suggestions.rule20.message'),
         icon: <Eye className="text-blue-500" />,
         color: "bg-blue-50 border-blue-100 dark:bg-blue-900/20 dark:border-blue-800"
       };
     }
 
     return {
-      title: "Stretching Time",
-      message: "Roll your shoulders and adjust your seat to improve posture.",
+      title: t('components.suggestions.stretch.title'),
+      message: t('components.suggestions.stretch.message'),
       icon: <Move className="text-green-500" />,
       color: "bg-green-50 border-green-100 dark:bg-green-900/20 dark:border-green-800"
     };
-  }, [latestEvent]);
+  }, [latestEvent, t]);
 
   return (
     <div className={`p-6 rounded-3xl border transition-all duration-500 ${advice.color}`}>
@@ -56,7 +58,7 @@ const SuggestionsBox: React.FC<Props> = ({ events }) => {
         </div>
       </div>
       <button className="w-full mt-4 py-2 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl text-xs font-bold transition-colors border border-slate-100 dark:border-slate-700">
-        Tell Me More
+        {t('components.suggestions.tellMore')}
       </button>
     </div>
   );

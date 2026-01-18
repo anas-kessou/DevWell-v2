@@ -2,12 +2,17 @@
 import React, { useMemo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
 import { HealthEvent, Severity } from '../types';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface Props {
   events: HealthEvent[];
+  dailyAlertCount?: number;
+  currentFatigue?: number;
+  dailyAvgFatigue?: number;
 }
 
-const HealthCharts: React.FC<Props> = ({ events }) => {
+const HealthCharts: React.FC<Props> = ({ events, dailyAlertCount = 0, currentFatigue = 0, dailyAvgFatigue = 0 }) => {
+  const { t } = useLanguage();
   const chartData = useMemo(() => {
     // Generate flat baseline if no events
     if (events.length === 0) {
@@ -42,40 +47,48 @@ const HealthCharts: React.FC<Props> = ({ events }) => {
   }, [events]);
 
   const stats = useMemo(() => {
-    const total = events.length;
-    const high = events.filter(e => e.severity === Severity.HIGH).length;
-    const avgSev = total > 0 ? (events.reduce((acc, e) => {
-      if (e.severity === Severity.HIGH) return acc + 100;
-      if (e.severity === Severity.MEDIUM) return acc + 50;
-      return acc + 10;
-    }, 0) / total).toFixed(0) : 0;
+    // Determine LED color based on fatigue level (1-9)
+    let ledColor = 'bg-slate-500'; // default
+    if (currentFatigue >= 1 && currentFatigue <= 3) ledColor = 'bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.5)]';
+    else if (currentFatigue >= 4 && currentFatigue <= 6) ledColor = 'bg-green-500 shadow-[0_0_15px_rgba(34,197,94,0.5)]';
+    else if (currentFatigue >= 7 && currentFatigue <= 9) ledColor = 'bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)]';
 
     return [
-      { label: 'Total Alerts', value: total, trend: total > 0 ? 'Active' : '0%' },
-      { label: 'Critical Issues', value: high, trend: high > 0 ? 'Review' : '0%', color: 'text-red-500' },
-      { label: 'Avg Severity', value: avgSev + '%', trend: 'Live' }
+      { label: t('components.healthCharts.totalAlerts'), value: dailyAlertCount, trend: t('components.healthCharts.today') },
+      { label: t('components.healthCharts.fatigueDetection'), value: currentFatigue, isLed: true, ledColor },
+      { label: t('components.healthCharts.avgFatigue'), value: dailyAvgFatigue, trend: t('components.healthCharts.daily') }
     ];
-  }, [events]);
+  }, [events, dailyAlertCount, currentFatigue, dailyAvgFatigue, t]);
 
   return (
     <div className="space-y-8">
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {stats.map((stat, i) => (
-          <div key={i} className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800">
-            <p className="text-xs text-slate-500 font-medium mb-1">{stat.label}</p>
+          <div key={i} className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 relative overflow-hidden group">
+            <p className="text-xs text-slate-500 font-medium mb-2 uppercase tracking-wider">{stat.label}</p>
             <div className="flex items-end justify-between">
-              <h4 className={`text-2xl font-bold ${stat.color || ''}`}>{stat.value}</h4>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${stat.trend.startsWith('+') ? 'bg-green-100 text-green-600' : stat.trend.startsWith('-') ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-600'}`}>
-                {stat.trend}
-              </span>
+              {stat.isLed ? (
+                <div className="flex items-center gap-4">
+                   <h4 className="text-3xl font-black text-slate-200">{t('components.healthCharts.level')} {stat.value}</h4>
+                   <div className={`w-6 h-6 rounded-full ${stat.ledColor} animate-pulse`} />
+                </div>
+              ) : (
+                <h4 className="text-3xl font-black text-slate-200">{stat.value}</h4>
+              )}
+              
+              {!stat.isLed && (
+                 <span className="text-[10px] font-bold px-3 py-1 bg-white/5 rounded-full text-slate-400 border border-white/5">
+                  {stat.trend}
+                 </span>
+              )}
             </div>
           </div>
         ))}
       </div>
 
-      <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-slate-800">
-        <h3 className="font-bold mb-8">Wellness Trend</h3>
-        <div className="h-[300px] w-full">
+      <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800">
+        <h3 className="font-bold mb-4">{t('components.healthCharts.wellnessTrend')}</h3>
+        <div className="h-[200px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={chartData}>
               <defs>
