@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { firebaseService } from '../services/firebaseService';
 
-type ProbePhase = 'scan' | 'scanning' | 'syncing' | 'stream';
+type ProbePhase = 'scan' | 'scanning' | 'syncing' | 'stream' | 'standby';
 
 const RemoteProbe: React.FC = () => {
   const [phase, setPhase] = useState<ProbePhase>('scan');
@@ -137,6 +137,11 @@ const RemoteProbe: React.FC = () => {
 
   const startStream = async (mode: 'user' | 'environment' = 'environment') => {
     try {
+      // Signal active source
+      if (hostId) {
+          await firebaseService.setActiveSource(hostId, 'mobile');
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { facingMode: mode }, 
         audio: true 
@@ -163,6 +168,27 @@ const RemoteProbe: React.FC = () => {
       setPhase('scan');
     }
   };
+
+  // --- Effects ---
+  useEffect(() => {
+     if (phase === 'stream' && hostId) {
+         const unsub = firebaseService.onSessionSourceChange(hostId, (source) => {
+             if (source === 'web') {
+                 // Web took control -> pause sending data, show standby
+                 if (streamRef.current) {
+                     streamRef.current.getTracks().forEach(t => t.stop());
+                     streamRef.current = null;
+                 }
+                 if (intervalRef.current) clearInterval(intervalRef.current);
+                 // We don't change 'phase', just UI state
+                 setPhase('standby' as any); // Dynamic casting or add to types
+             } else if (source === 'mobile') {
+                 // We are active.
+             }
+         });
+         return () => unsub();
+     }
+  }, [phase, hostId]);
 
   const stopStream = () => {
     if (streamRef.current) {
@@ -349,6 +375,29 @@ const RemoteProbe: React.FC = () => {
         </div>
       </div>
     );
+  }
+
+  if (phase === ('standby' as any)) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full p-8 bg-black">
+           <Monitor className="w-16 h-16 text-slate-600 mb-4" />
+           <h2 className="text-xl font-bold tracking-widest text-slate-400 uppercase text-center">
+             Host Camera Active
+           </h2>
+           <p className="text-slate-600 text-xs font-mono mb-8 text-center">
+             REMOTE SENSORS OVERRIDDEN
+           </p>
+           <button 
+             onClick={() => {
+                setPhase('stream');
+                startStream(cameraFacingMode);
+             }}
+             className="bg-blue-600/20 border border-blue-500/50 text-blue-400 px-8 py-3 rounded-full uppercase text-xs font-bold tracking-widest hover:bg-blue-600 hover:text-white transition-all"
+           >
+             Re-Activate Sensor
+           </button>
+        </div>
+      );
   }
 
   // Phase: Stream

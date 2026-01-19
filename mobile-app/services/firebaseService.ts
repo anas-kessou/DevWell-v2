@@ -3,7 +3,8 @@ import {
   getFirestore, 
   doc, 
   getDoc, 
-  updateDoc
+  updateDoc,
+  onSnapshot
 } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -51,11 +52,25 @@ class FirebaseService {
                 image: frameData,
                 timestamp: Date.now(),
                 ...metadata
-            }
+            },
+            activeSource: 'mobile' // Implicitly set source to mobile when streaming
         });
     } catch (e) {
         console.error("Stream Error", e);
     }
+  }
+
+  async setActiveSource(sessionId: string, source: 'web' | 'mobile' | null): Promise<void> {
+       const sessionRef = doc(db, "remote_sessions", sessionId);
+       await updateDoc(sessionRef, { activeSource: source });
+  }
+
+  onSessionSourceChange(sessionId: string, callback: (source: 'web' | 'mobile' | null) => void): () => void {
+      return onSnapshot(doc(db, "remote_sessions", sessionId), (snapshot) => {
+          if (snapshot.exists()) {
+              callback(snapshot.data().activeSource || null);
+          }
+      });
   }
 
   async terminateSession(sessionId: string): Promise<void> {

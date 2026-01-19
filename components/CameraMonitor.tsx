@@ -19,13 +19,15 @@ const CameraMonitor = forwardRef<CameraMonitorHandle, Props>(({ onEventDetected,
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [remoteSessionId, setRemoteSessionId] = useState<string | null>(null);
   const [remoteImage, setRemoteImage] = useState<string | null>(null);
+  const [activeSource, setActiveSource] = useState<'web' | 'mobile' | null>(null);
   
   useImperativeHandle(ref, () => ({
     getSnapshot: () => {
       // If remote, return the last known remote image (stripped of header)
-      if (remoteImage) return remoteImage.split(',')[1];
+      if (remoteImage && activeSource === 'mobile') return remoteImage.split(',')[1];
 
       if (!videoRef.current) return null;
+
       const canvas = document.createElement('canvas'); // Create temp canvas
       canvas.width = videoRef.current.videoWidth;
       canvas.height = videoRef.current.videoHeight;
@@ -54,37 +56,51 @@ const CameraMonitor = forwardRef<CameraMonitorHandle, Props>(({ onEventDetected,
      const id = prompt("Enter Remote Session ID from Mobile:");
      if (id) {
          setRemoteSessionId(id);
-         setIsMonitoring(true);
+         // Don't auto-start monitoring effectively until we confirm source
+         // But we can listen for status
      }
   };
 
-  // Subscribe to remote data if ID is set
+  // Sync Active Source Logic
   useEffect(() => {
-     if (!remoteSessionId) return;
-     
-     const unsub = FirebaseService.onSessionDataChange(remoteSessionId, (data) => {
-         // Auto-Switch Logic: If remote sends an image, we switch the "Monitor" ON
-         // and ensure local camera is OFF to avoid conflict/double usage.
+    if (!remoteSessionId) return;
+
+    const unsubStatus = FirebaseService.onSessionStatusChange(remoteSessionId, (source) => {
+        setActiveSource(source);
+        
+        if (source === 'mobile') {
+            // Mobile took control -> Stop Local
+            if (videoRef.current?.srcObject) {
+                const stream = videoRef.current.srcObject as MediaStream;
+                stream.getTracks().forEach(t => t.stop());
+                videoRef.current.srcObject = null;
+            }
+            setIsMonitoring(true); // "Monitoring" but via remote
+        } else if (source === 'web') {
+            // Web took control -> If we aren't running local, start local? 
+            // Or just allow user to start local manually.
+            // If we receive 'web' that means WE presumably set it, or another tab.
+            // If it's us, we are already running.
+        } else {
+            // Idle
+        }
+    });
+
+    const unsubData = FirebaseService.onSessionDataChange(remoteSessionId, (data) => {
          if (data?.image) {
              setRemoteImage(data.image);
-             
-             // If we were monitoring locally (videoRef has srcObject), STOP it.
-             if (videoRef.current && videoRef.current.srcObject) {
-                 const stream = videoRef.current.srcObject as MediaStream;
-                 stream.getTracks().forEach(t => t.stop());
-                 videoRef.current.srcObject = null;
-                 console.log("Local camera deactivated: Remote signal priority.");
-             }
-             
-             // Ensure UI reflects "Active" state
-             // We use a flag check to avoid infinite re-renders or loops if controlled by parent
-             setIsMonitoring(true); 
          }
-     });
-     return () => unsub();
+    });
+
+    // Default to 'active' on connect if we initiated
+    return () => {
+        unsubStatus();
+        unsubData();
+    };
   }, [remoteSessionId, setIsMonitoring]);
 
   const audioContextRef = useRef<AudioContext | null>(null);
+
   const audioProcessorRef = useRef<ScriptProcessorNode | null>(null);
   const audioDataRef = useRef<Int16Array | null>(null);
   
@@ -146,10 +162,14 @@ const CameraMonitor = forwardRef<CameraMonitorHandle, Props>(({ onEventDetected,
   };
 
   const startMonitoring = async () => {
-    // If remote is already active/present, we don't start local unless explicitly forcing it (which requires stopping remote first)
-    if (remoteSessionId && remoteImage) {
-        console.log("Remote session active: preventing local override.");
-        return;
+    // Determine exclusion
+    if (remoteSessionId && activeSource === 'mobile') {
+        const confirmSwitch = window.confirm("Mobile camera is active. Switch to Local Camera?");
+        if (!confirmSwitch) return;
+        // Signal Mobile to Stop
+        await FirebaseService.setSessionActiveSource(remoteSessionId, 'web');
+    } else if (remoteSessionId) {
+        await FirebaseService.setSessionActiveSource(remoteSessionId, 'web');
     }
 
     try {
@@ -193,6 +213,13 @@ const CameraMonitor = forwardRef<CameraMonitorHandle, Props>(({ onEventDetected,
     audioContextRef.current?.close();
     recognitionRef.current?.stop(); // Stop listening
     setIsMonitoring(false);
+    
+    if (remoteSessionId) {
+        // If we were the active source, set to null (Idle)
+        if (activeSource === 'web') {
+            FirebaseService.setSessionActiveSource(remoteSessionId, null);
+        }
+    }
   };
 
   const captureAndAnalyze = useCallback(async () => {
@@ -201,7 +228,7 @@ const CameraMonitor = forwardRef<CameraMonitorHandle, Props>(({ onEventDetected,
     
     let imageBase64: string = '';
     
-    if (remoteImage) {
+    if (remoteImage && activeSource === 'mobile') {
         imageBase64 = remoteImage.split(',')[1];
     } else {
         if (!videoRef.current || !videoRef.current.srcObject) return; // No source
@@ -275,7 +302,7 @@ const CameraMonitor = forwardRef<CameraMonitorHandle, Props>(({ onEventDetected,
             )}
             <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border flex items-center gap-2 ${isMonitoring ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-slate-800 text-slate-500 border-white/5'}`}>
                <span className={`w-2 h-2 rounded-full ${isMonitoring ? 'bg-green-500 animate-pulse' : 'bg-slate-600'}`}></span>
-               {isMonitoring ? 'Live Feed' : 'Offline'}
+               {activeSource === 'mobile' ? 'Flow Synchronized' : (isMonitoring ? 'Live Feed' : 'Sensors Idle')}
             </div>
         </div>
       </div>
@@ -287,10 +314,10 @@ const CameraMonitor = forwardRef<CameraMonitorHandle, Props>(({ onEventDetected,
             autoPlay 
             playsInline 
             muted 
-            className={`w-full h-full object-cover transition-transform duration-700 ${remoteImage ? 'hidden' : ''} ${!isMonitoring ? 'opacity-0 absolute pointer-events-none' : 'opacity-80'}`}
+            className={`w-full h-full object-cover transition-transform duration-700 ${remoteImage && activeSource === 'mobile' ? 'hidden' : ''} ${!isMonitoring ? 'opacity-0 absolute pointer-events-none' : 'opacity-80'}`}
          />
 
-         {remoteImage && isMonitoring && (
+         {remoteImage && isMonitoring && activeSource === 'mobile' && (
             <img src={remoteImage} className="w-full h-full object-cover absolute inset-0" alt="Remote Feed" />
          )}
 
@@ -301,9 +328,10 @@ const CameraMonitor = forwardRef<CameraMonitorHandle, Props>(({ onEventDetected,
             {/* HUD Overlay */}
             <div className="absolute top-4 right-4 flex flex-col gap-2 items-end">
                 <div className="bg-black/50 backdrop-blur-md px-3 py-1 rounded-lg border border-white/10 text-[10px] font-mono text-emerald-400">
-                   {remoteSessionId ? 'R-LINK: STABLE' : 'CAM-1: ACTIVE'}
+                   {remoteSessionId ? (activeSource === 'mobile' ? 'R-LINK: SYNC' : 'R-LINK: STBY') : 'CAM-1: ACTIVE'}
                 </div>
             </div>
+
             
             {analyzing && (
                <div className="absolute bottom-4 left-4 flex items-center gap-2 bg-blue-600/20 backdrop-blur-md px-3 py-1 rounded-lg border border-blue-500/30 text-[10px] font-bold text-blue-300 animate-pulse">

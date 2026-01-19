@@ -672,9 +672,27 @@ export class FirebaseService {
       hostId: userId,
       createdAt: serverTimestamp(),
       isActive: true,
-      data: null
+      data: null,
+      activeSource: null // 'web' | 'mobile' | null
     });
     return sessionRef.id;
+  }
+
+  static async setSessionActiveSource(sessionId: string, source: 'web' | 'mobile' | null) {
+      const sessionRef = doc(db, "remote_sessions", sessionId);
+      await updateDoc(sessionRef, {
+          activeSource: source
+      });
+  }
+
+  static onSessionStatusChange(sessionId: string, callback: (source: 'web' | 'mobile' | null) => void): () => void {
+      const unsub = onSnapshot(doc(db, "remote_sessions", sessionId), (doc) => {
+          if (doc.exists()) {
+              const data = doc.data();
+              callback(data.activeSource || null);
+          }
+      });
+      return unsub;
   }
 
   static async updateSessionData(sessionId: string, frameData: string, audioData?: string) {
