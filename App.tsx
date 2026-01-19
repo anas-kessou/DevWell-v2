@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { HashRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
-import { Activity } from 'lucide-react';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
@@ -16,8 +15,10 @@ import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
 import Support from './pages/Support';
 import ErrorBoundary from './components/ErrorBoundary';
+import MobileAppBanner from './components/MobileAppBanner';
 import { FirebaseService } from './services/firebaseService';
 import { LanguageProvider } from './contexts/LanguageContext';
+import SensorMode from './pages/SensorMode';
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -54,6 +55,7 @@ const App: React.FC = () => {
     <LanguageProvider>
       <div className={`${darkMode ? 'dark' : ''} min-h-screen transition-colors duration-300`}>
         <ErrorBoundary>
+        <MobileAppBanner />
         <HashRouter>
           <div className="bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen">
             <Routes>
@@ -68,6 +70,7 @@ const App: React.FC = () => {
               <Route path="/support" element={<Support />} />
               <Route path="/login" element={<Login onLogin={handleLogin} />} />
               <Route path="/register" element={<Register onRegister={() => handleLogin('user@example.com')} />} />
+              <Route path="/sensor-mode" element={<SensorMode />} />
               <Route 
                 path="/dashboard" 
                 element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" />}         

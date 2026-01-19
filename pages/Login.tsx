@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Activity, Mail, Lock, Github, Chrome, AlertCircle } from 'lucide-react';
+import { Activity, Mail, Lock, Github, Chrome, AlertCircle, ArrowLeft } from 'lucide-react';
 import { FirebaseService } from '../services/firebaseService';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -63,6 +63,9 @@ const Login: React.FC<Props> = ({ onLogin }) => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-slate-950" dir={dir}>
+      <Link to="/" className="absolute top-8 left-8 text-slate-500 hover:text-white transition-colors flex items-center gap-2 text-sm font-bold uppercase tracking-widest">
+         <ArrowLeft size={16} /> Home
+      </Link>
       <div className="w-full max-w-md">
         <div className="flex items-center gap-3 font-bold text-3xl text-white mb-12 justify-center">
           <div className="bg-blue-600 p-2 rounded-xl">

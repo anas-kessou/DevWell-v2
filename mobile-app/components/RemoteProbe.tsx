@@ -11,7 +11,8 @@ import {
   Loader2,
   TriangleAlert,
   Power,
-  Download
+  Download,
+  RefreshCw
 } from 'lucide-react';
 import { firebaseService } from '../services/firebaseService';
 
@@ -23,6 +24,8 @@ const RemoteProbe: React.FC = () => {
   const [hostId, setHostId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [cameraFacingMode, setCameraFacingMode] = useState<'user' | 'environment'>('environment');
+
   
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
 
@@ -132,10 +135,10 @@ const RemoteProbe: React.FC = () => {
     await verifyAndConnect(syncCode);
   };
 
-  const startStream = async () => {
+  const startStream = async (mode: 'user' | 'environment' = 'environment') => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' }, 
+        video: { facingMode: mode }, 
         audio: true 
       });
       
@@ -171,6 +174,16 @@ const RemoteProbe: React.FC = () => {
     setHostId(null);
     localStorage.removeItem('devwell_host_id');
   };
+
+  const toggleCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+    }
+    const newMode = cameraFacingMode === 'environment' ? 'user' : 'environment';
+    setCameraFacingMode(newMode);
+    startStream(newMode);
+  };
+
 
   const captureAndSendFrame = () => {
     if (!videoRef.current || !canvasRef.current || !hostId) return;
@@ -410,15 +423,23 @@ const RemoteProbe: React.FC = () => {
       </div>
 
       {/* Control Footer */}
-      <div className="p-6 bg-slate-950 border-t border-slate-800 z-30 pb-8 sm:pb-6">
+      <div className="p-6 bg-slate-950 border-t border-slate-800 z-30 pb-8 sm:pb-6 flex gap-3">
+        <button 
+          onClick={toggleCamera}
+          className="flex-[1] group bg-slate-900 border border-blue-900/30 hover:bg-blue-950/20 hover:border-blue-500/50 text-blue-400 py-4 rounded-xl flex items-center justify-center gap-2 transition-all duration-300"
+        >
+          <RefreshCw className="w-5 h-5 group-hover:rotate-180 transition-transform duration-500" />
+        </button>
+
         <button 
           onClick={handleTerminate}
-          className="w-full group bg-slate-900 border border-red-900/30 hover:bg-red-950/20 hover:border-red-500/50 text-red-400 py-4 rounded-xl flex items-center justify-center gap-2 transition-all duration-300"
+          className="flex-[4] group bg-slate-900 border border-red-900/30 hover:bg-red-950/20 hover:border-red-500/50 text-red-400 py-4 rounded-xl flex items-center justify-center gap-2 transition-all duration-300"
         >
           <Power className="w-5 h-5 group-hover:scale-110 transition-transform" />
           <span className="font-mono text-xs tracking-[0.2em] font-bold uppercase">Terminate Protocol</span>
         </button>
       </div>
+
     </div>
   );
 };

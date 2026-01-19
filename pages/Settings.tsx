@@ -13,19 +13,30 @@ import {
   Fingerprint,
   User,
   LogOut,
-  Mail
+  Mail,
+  Smartphone,
+  QrCode,
+  Globe
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PrivacySettings } from '../types';
 import { FirebaseService } from '../services/firebaseService';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Globe } from 'lucide-react';
+import QRCode from 'react-qr-code';
 
 const Settings: React.FC = () => {
   const navigate = useNavigate();
   const { t, dir, language, setLanguage } = useLanguage();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [dbUser, setDbUser] = useState<any>(null);
+  
+  const [syncSessionId, setSyncSessionId] = useState<string | null>(null);
+
+  const handleGenerateLink = async () => {
+     if (!currentUser) return;
+     const id = await FirebaseService.createSyncSession(currentUser.uid);
+     setSyncSessionId(id);
+  };
   
   const [settings, setSettings] = useState<PrivacySettings>({
     anonymizeAI: true,
@@ -193,6 +204,60 @@ const Settings: React.FC = () => {
             >
               <LogOut size={14} /> {t('logOut')}
             </button>
+          </div>
+        </div>
+
+        {/* Section 0.5: Device Link */}
+        <div className="glass-card rounded-[40px] p-10 space-y-8 border border-white/5 shadow-2xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+            <Smartphone size={120} />
+          </div>
+          
+          <div className="relative z-10">
+             <div className="flex items-center gap-4 mb-6">
+                <div className="p-3 rounded-full bg-indigo-500/10 text-indigo-400">
+                   <QrCode size={24} />
+                </div>
+                <div>
+                   <h3 className="text-xl font-black uppercase text-white">Neural Bridge</h3>
+                   <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Connect Mobile Sensor Node</p>
+                </div>
+             </div>
+
+             <div className="flex flex-col md:flex-row items-center gap-12">
+                <div className="flex-1 space-y-4">
+                   <p className="text-sm text-slate-400 leading-relaxed">
+                     Offload visual processing to your mobile device's dedicated neural engine. This reduces CPU load on your main workstation and allows for flexible sensor placement.
+                   </p>
+                   <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+                     1. Open DevWell on your mobile device.<br/>
+                     2. Select "Link with Computer" on login.<br/>
+                     3. Scan this neural imprint.
+                   </p>
+                   {!syncSessionId && (
+                      <button 
+                        onClick={handleGenerateLink}
+                        className="px-6 py-3 bg-indigo-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-colors"
+                      >
+                        Generate Link Signal
+                      </button>
+                   )}
+                </div>
+                
+                {syncSessionId && (
+                   <div className="bg-white p-4 rounded-xl shadow-2xl animate-in zoom-in duration-500">
+                      <div style={{ height: "auto", margin: "0 auto", maxWidth: 160, width: "100%" }}>
+                        <QRCode
+                          size={256}
+                          style={{ height: "auto", maxWidth: "100%", width: "100%" }}
+                          value={syncSessionId}
+                          viewBox={`0 0 256 256`}
+                        />
+                      </div>
+                      <p className="text-[10px] font-black text-center text-slate-900 mt-2 uppercase tracking-tight opacity-50">Session: {syncSessionId.slice(0,8)}</p>
+                   </div>
+                )}
+             </div>
           </div>
         </div>
 

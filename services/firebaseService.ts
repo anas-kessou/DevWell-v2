@@ -14,7 +14,8 @@ import {
   serverTimestamp,
   collectionGroup,
   getCountFromServer,
-  updateDoc
+  updateDoc,
+  onSnapshot
 } from "firebase/firestore";
 import { 
   getAuth, 
@@ -663,4 +664,37 @@ export class FirebaseService {
         await this.upgradeUser(user.uid);
     }
   }
+
+  // --- Remote Sensing / Neural Link ---
+
+  static async createSyncSession(userId: string): Promise<string> {
+    const sessionRef = await addDoc(collection(db, "remote_sessions"), {
+      hostId: userId,
+      createdAt: serverTimestamp(),
+      isActive: true,
+      data: null
+    });
+    return sessionRef.id;
+  }
+
+  static async updateSessionData(sessionId: string, frameData: string, audioData?: string) {
+    const sessionRef = doc(db, "remote_sessions", sessionId);
+    await updateDoc(sessionRef, {
+       data: {
+          image: frameData,
+          audio: audioData || null,
+          timestamp: Date.now()
+       }
+    });
+  }
+
+  static onSessionDataChange(sessionId: string, callback: (data: any) => void): () => void {
+      const unsub = onSnapshot(doc(db, "remote_sessions", sessionId), (doc) => {
+         if (doc.exists()) {
+             callback(doc.data().data);
+         }
+      });
+      return unsub;
+  }
 }
+

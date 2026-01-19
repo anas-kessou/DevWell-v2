@@ -1,7 +1,7 @@
-
 import React, { useRef, useEffect, useState, useImperativeHandle, forwardRef, useCallback } from 'react';
-import { Camera, CameraOff, Mic, MicOff, Scan, ShieldAlert, Zap, Waves, Activity, Loader2 } from 'lucide-react';
+import { Camera, CameraOff, Mic, MicOff, Scan, ShieldAlert, Zap, Waves, Activity, Loader2, Smartphone } from 'lucide-react';
 import { GeminiService } from '../services/geminiService';
+import { FirebaseService } from '../services/firebaseService';
 import { HealthEvent, Severity, EventType } from '../types';
 
 export interface CameraMonitorHandle {
@@ -17,9 +17,14 @@ interface Props {
 const CameraMonitor = forwardRef<CameraMonitorHandle, Props>(({ onEventDetected, isMonitoring, setIsMonitoring }, ref) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [remoteSessionId, setRemoteSessionId] = useState<string | null>(null);
+  const [remoteImage, setRemoteImage] = useState<string | null>(null);
   
   useImperativeHandle(ref, () => ({
     getSnapshot: () => {
+      // If remote, return the last known remote image (stripped of header)
+      if (remoteImage) return remoteImage.split(',')[1];
+
       if (!videoRef.current) return null;
       const canvas = document.createElement('canvas'); // Create temp canvas
       canvas.width = videoRef.current.videoWidth;
@@ -30,6 +35,55 @@ const CameraMonitor = forwardRef<CameraMonitorHandle, Props>(({ onEventDetected,
       return canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
     }
   }));
+
+  // Check for active remote session
+  useEffect(() => {
+     // For demo simplicity, we can just grab the last created session by this user,
+     // OR ideally pass it via props/context.
+     // Here we'll try to find one if the user enters a "sync code" manually or just check for ANY active session by this user?
+     // A better UX would be selecting the session, but let's assume if one exists we use it.
+     const tryConnectRemote = async () => {
+         const user = (await FirebaseService.onAuthChange(() => {}) as any); // Just getting auth
+         // In a real app we'd query active sessions for this user.
+         // Skipping complex query logic for now; relying on user to start local cam unless told otherwise.
+     };
+     tryConnectRemote();
+  }, []);
+
+  const handleManualRemoteLink = async () => {
+     const id = prompt("Enter Remote Session ID from Mobile:");
+     if (id) {
+         setRemoteSessionId(id);
+         setIsMonitoring(true);
+     }
+  };
+
+  // Subscribe to remote data if ID is set
+  useEffect(() => {
+     if (!remoteSessionId) return;
+     
+     const unsub = FirebaseService.onSessionDataChange(remoteSessionId, (data) => {
+         // Auto-Switch Logic: If remote sends an image, we switch the "Monitor" ON
+         // and ensure local camera is OFF to avoid conflict/double usage.
+         if (data?.image) {
+             setRemoteImage(data.image);
+             
+             // If we were monitoring locally (videoRef has srcObject), STOP it.
+             if (videoRef.current && videoRef.current.srcObject) {
+                 const stream = videoRef.current.srcObject as MediaStream;
+                 stream.getTracks().forEach(t => t.stop());
+                 videoRef.current.srcObject = null;
+                 console.log("Local camera deactivated: Remote signal priority.");
+             }
+             
+             // Ensure UI reflects "Active" state
+             // We use a flag check to avoid infinite re-renders or loops if controlled by parent
+             setIsMonitoring(true); 
+         }
+     });
+     return () => unsub();
+  }, [remoteSessionId, setIsMonitoring]);
+
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioProcessorRef = useRef<ScriptProcessorNode | null>(null);
   const audioDataRef = useRef<Int16Array | null>(null);
@@ -92,6 +146,12 @@ const CameraMonitor = forwardRef<CameraMonitorHandle, Props>(({ onEventDetected,
   };
 
   const startMonitoring = async () => {
+    // If remote is already active/present, we don't start local unless explicitly forcing it (which requires stopping remote first)
+    if (remoteSessionId && remoteImage) {
+        console.log("Remote session active: preventing local override.");
+        return;
+    }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       if (videoRef.current) {
@@ -136,16 +196,26 @@ const CameraMonitor = forwardRef<CameraMonitorHandle, Props>(({ onEventDetected,
   };
 
   const captureAndAnalyze = useCallback(async () => {
-    if (!isMonitoring || !videoRef.current || analyzing) return;
-
+    // UPDATED: Support analyzing Remote Image if it exists, even if videoRef is effectively off/hidden
+    if (!isMonitoring || analyzing) return;
+    
+    let imageBase64: string = '';
+    
+    if (remoteImage) {
+        imageBase64 = remoteImage.split(',')[1];
+    } else {
+        if (!videoRef.current || !videoRef.current.srcObject) return; // No source
+        
+        const canvas = canvasRef.current!;
+        const video = videoRef.current!;
+        const ctx = canvas.getContext('2d')!;
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0);
+        imageBase64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+    }
+    
     setAnalyzing(true);
-    const canvas = canvasRef.current!;
-    const video = videoRef.current!;
-    const ctx = canvas.getContext('2d')!;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    ctx.drawImage(video, 0, 0);
-    const imageBase64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
     
     let audioBase64 = undefined;
     if (audioDataRef.current) {
@@ -180,63 +250,72 @@ const CameraMonitor = forwardRef<CameraMonitorHandle, Props>(({ onEventDetected,
   }, [isMonitoring, captureAndAnalyze]);
 
   return (
-    <div className="glass-card rounded-[32px] p-6 border border-white/5 relative overflow-hidden">
-      <div className="flex items-center justify-between mb-6">
+    <div className="glass-card rounded-[40px] p-6 lg:p-10 relative overflow-hidden space-y-6 lg:space-y-8 h-full bg-slate-900 border border-slate-800">
+      <div className="flex items-center justify-between z-10 relative">
         <div className="flex items-center gap-4">
-          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${isMonitoring ? 'bg-blue-600/20 text-blue-400' : 'bg-slate-800 text-slate-500'}`}>
-            <Activity className={isMonitoring ? 'animate-pulse' : ''} />
-          </div>
-          <div>
-            <h3 className="font-black tracking-tight">NEURAL SYNC HUD</h3>
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">AV-Multimodal Pipeline</p>
-          </div>
+           {remoteSessionId ? <Smartphone className="text-indigo-400" /> : <Scan className="text-blue-500 animate-pulse" />}
+           <h3 className="text-xl font-black uppercase tracking-tight">{remoteSessionId ? 'Remote Node Linked' : 'Bio-Signal Monitor'}</h3>
         </div>
-        <button 
-          onClick={isMonitoring ? stopMonitoring : startMonitoring}
-          className={`px-6 py-3 rounded-2xl text-xs font-black transition-all ${isMonitoring ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-blue-600 text-white shadow-xl shadow-blue-600/30'}`}
-        >
-          {isMonitoring ? 'DISCONNECT' : 'INITIALIZE SYNC'}
-        </button>
+        <div className="flex items-center gap-2">
+            {!isMonitoring && !remoteSessionId && (
+               <div className="flex items-center gap-3">
+                 <button onClick={startMonitoring} className="text-[10px] font-black uppercase text-blue-400 hover:text-white transition-colors flex items-center gap-1">
+                     <Camera size={14} /> Activate Local
+                 </button>
+                 <div className="h-3 w-px bg-white/10" />
+                 <button onClick={handleManualRemoteLink} className="text-[10px] font-black uppercase text-indigo-400 hover:text-white transition-colors">
+                     Link Mobile
+                 </button>
+               </div>
+            )}
+            {isMonitoring && !remoteSessionId && (
+                <button onClick={stopMonitoring} className="text-[10px] font-black uppercase text-red-400 hover:text-white transition-colors flex items-center gap-1">
+                    <CameraOff size={14} /> Stop
+                </button>
+            )}
+            <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border flex items-center gap-2 ${isMonitoring ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-slate-800 text-slate-500 border-white/5'}`}>
+               <span className={`w-2 h-2 rounded-full ${isMonitoring ? 'bg-green-500 animate-pulse' : 'bg-slate-600'}`}></span>
+               {isMonitoring ? 'Live Feed' : 'Offline'}
+            </div>
+        </div>
       </div>
+      
+      <div className="relative aspect-video rounded-3xl overflow-hidden bg-black/50 border border-white/5 shadow-inner group">
+         {/* Always present Video Element to ensure Ref availability */}
+         <video 
+            ref={videoRef} 
+            autoPlay 
+            playsInline 
+            muted 
+            className={`w-full h-full object-cover transition-transform duration-700 ${remoteImage ? 'hidden' : ''} ${!isMonitoring ? 'opacity-0 absolute pointer-events-none' : 'opacity-80'}`}
+         />
 
-      <div className={`relative aspect-video bg-slate-900 rounded-[28px] overflow-hidden border-2 transition-all duration-1000 ${currentStatus?.severity === 'HIGH' ? 'border-red-500 shadow-[0_0_50px_rgba(239,68,68,0.2)]' : 'border-transparent'}`}>
-        <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
-        <canvas ref={canvasRef} className="hidden" />
+         {remoteImage && isMonitoring && (
+            <img src={remoteImage} className="w-full h-full object-cover absolute inset-0" alt="Remote Feed" />
+         )}
 
-        {isMonitoring && (
+        {isMonitoring ? (
           <>
-            <div className="absolute top-6 left-6 flex gap-3">
-              <div className="bg-red-600 text-white px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-tighter flex items-center gap-2">
-                <span className="w-2 h-2 bg-white rounded-full animate-ping" /> NEURAL LIVE
-              </div>
-              <div className="bg-blue-600/80 backdrop-blur-md text-white px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-tighter">
-                SENSORS ACTIVE
-              </div>
-            </div>
-
-            <div className="absolute bottom-6 left-6 right-6 flex items-end justify-between">
-              <div className="bg-black/60 backdrop-blur-xl p-4 rounded-2xl border border-white/10 w-48">
-                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-3">Vocal Tension</p>
-                <div className="h-1 bg-slate-800 rounded-full overflow-hidden">
-                  <div className="h-full bg-blue-500 transition-all duration-500" style={{ width: `${vocalScore}%` }} />
+            <div className="absolute inset-0 bg-gradient-to-t from-blue-900/10 to-transparent pointer-events-none" />
+            
+            {/* HUD Overlay */}
+            <div className="absolute top-4 right-4 flex flex-col gap-2 items-end">
+                <div className="bg-black/50 backdrop-blur-md px-3 py-1 rounded-lg border border-white/10 text-[10px] font-mono text-emerald-400">
+                   {remoteSessionId ? 'R-LINK: STABLE' : 'CAM-1: ACTIVE'}
                 </div>
-              </div>
-              {analyzing && (
-                <div className="flex items-center gap-2 bg-white text-slate-950 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest animate-pulse">
-                  <Loader2 size={12} className="animate-spin" /> Gemini Flash Processing
-                </div>
-              )}
             </div>
+            
+            {analyzing && (
+               <div className="absolute bottom-4 left-4 flex items-center gap-2 bg-blue-600/20 backdrop-blur-md px-3 py-1 rounded-lg border border-blue-500/30 text-[10px] font-bold text-blue-300 animate-pulse">
+                  <Loader2 size={12} className="animate-spin" />
+                  ANALYZING NEURAL DATA...
+               </div>
+            )}
           </>
-        )}
-
-        {currentStatus && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in zoom-in duration-300">
-            <div className={`p-8 rounded-[32px] border-2 text-center max-w-sm shadow-2xl ${currentStatus.severity === 'HIGH' ? 'bg-red-500/20 border-red-500/40 text-red-100' : 'bg-amber-500/20 border-amber-500/40 text-amber-100'}`}>
-              <Zap size={40} className="mx-auto mb-4 animate-bounce" />
-              <h4 className="text-xl font-black uppercase mb-2">{currentStatus.type} ALERT</h4>
-              <p className="text-sm font-medium leading-relaxed opacity-90">{currentStatus.description}</p>
-            </div>
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-600 bg-slate-900/50 z-20">
+            <CameraOff size={48} className="mb-4 opacity-50" />
+            <p className="text-xs font-black uppercase tracking-widest">Sensors Deactivated</p>
           </div>
         )}
       </div>
