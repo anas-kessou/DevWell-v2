@@ -1,0 +1,8 @@
+{
+  "name": "DevWell Remote Probe",
+  "description": "Mobile companion sensor for the DevWell Neural Wellness Platform.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
