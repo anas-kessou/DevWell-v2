@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>DevWell Remote Probe</title>
+    
+    <!-- PWA Settings -->
+    <link rel="manifest" href="/DevWell-v2/probe/assets/manifest-Hi2gfzTn.json" />
+    <meta name="theme-color" content="#020617" />
+    
+    <!-- iOS Native Feel -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="apple-touch-icon" href="/DevWell-v2/probe/assets/icon-BB_rd0oX.svg" />
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: #020617; /* Slate 950 */
+        color: #e2e8f0; /* Slate 200 */
+        overflow: hidden; /* Prevent scroll on mobile app feel */
+        /* Support for iPhone Notch areas */
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+      }
+      .font-mono {
+        font-family: 'JetBrains Mono', monospace;
+      }
+      .neural-glow {
+        box-shadow: 0 0 20px rgba(37, 99, 235, 0.3);
+      }
+      .scan-line {
+        position: absolute;
+        width: 100%;
+        height: 2px;
+        background: rgba(59, 130, 246, 0.8);
+        box-shadow: 0 0 10px rgba(59, 130, 246, 0.8);
+        animation: scan 3s linear infinite;
+      }
+      @keyframes scan {
+        0% { top: 0%; opacity: 0; }
+        10% { opacity: 1; }
+        90% { opacity: 1; }
+        100% { top: 100%; opacity: 0; }
+      }
+      @keyframes radar {
+        0% { transform: scale(0); opacity: 0.8; }
+        100% { transform: scale(2.5); opacity: 0; }
+      }
+      .radar-ping {
+        animation: radar 2s infinite ease-out;
+      }
+    </style>
+
+<link rel="stylesheet" href="/index.css">
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.3",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/"
+  }
+}
+</script>
+  <script type="module" crossorigin src="/DevWell-v2/probe/assets/index-6EUydkLy.js"></script>
+</head>
+  <body>
+    <div id="root"></div>
+</body>
+</html>
