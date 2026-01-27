@@ -105,12 +105,15 @@ npm run dev
 ## 📐 System Architecture
 
 ### High-Level Architecture
+
 ![System Architecture](./system-architecture/system-architectur.svg)
 
 ### Use Case Diagram
+
 ![Use Case](./system-architecture/Use-Case.svg)
 
 ### Sequence Diagrams
+
 **Mobile Sync & Data Flow**
 ![Mobile Sync](./system-architecture/sequence-Neural-Bridge-Mobile-Sync.svg)
 
@@ -118,9 +121,11 @@ npm run dev
 ![Biometric Analysis](./system-architecture/sequence-Biometric-Analysis.svg)
 
 ### Activity Flow (Core Logic)
+
 ![Activity Flow](./system-architecture/activity.svg)
 
 ### Class Structure
+
 ![Class Diagram](./system-architecture/class.svg)
 
 ### 5. Running the Mobile Probe
