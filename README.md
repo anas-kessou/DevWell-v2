@@ -12,7 +12,9 @@
 
 ## ⚡ Overview
 
-**DevWell** is a futuristic productivity suite that bridges the gap between biological needs and digital demands. It acts as a background monitor for developers, using webcam input to analyze posture, fatigue, and focus levels in real-time. By synchronizing your work patterns with your circadian rhythm, DevWell helps prevent burnout before it compiles.
+**DevWell** is a futuristic productivity suite that bridges the gap between biological needs and digital demands. It acts as a background monitor for developers, using webcam input to analyze posture, fatigue, and focus levels in real-time. By synchronizing your work patterns with your circadian rhythm, DevWell helps prevent burnout determining factors.
+
+> **Impact:** Developer burnout costs the global tech industry an estimated **$300 Billion annually** in lost productivity and turnover. DevWell aims to reclaim this lost potential.
 
 The ecosystem consists of two main components:
 
@@ -30,7 +32,7 @@ The ecosystem consists of two main components:
 
 ### 🔮 The Oracle (AI Assistant)
 
-- **Gemini Integration:** Powered by Google's Gemini Pro model.
+- **Gemini Integration:** Powered by Google's **Gemini 3 Pro** model.
 - **Smart Recommendations:** Context-aware suggestions for breaks, stretches, or hydration based on your specific fatigue metrics.
 - **Proactive Health:** Detects signs of "Zombie Mode" (coding while exhausted) and intervenes.
 
@@ -99,6 +101,27 @@ npm install
 ```bash
 npm run dev
 ```
+
+## 📐 System Architecture
+
+### High-Level Architecture
+![System Architecture](./system-architecture/system-architectur.svg)
+
+### Use Case Diagram
+![Use Case](./system-architecture/Use-Case.svg)
+
+### Sequence Diagrams
+**Mobile Sync & Data Flow**
+![Mobile Sync](./system-architecture/sequence-Neural-Bridge-Mobile-Sync.svg)
+
+**Biometric Analysis**
+![Biometric Analysis](./system-architecture/sequence-Biometric-Analysis.svg)
+
+### Activity Flow (Core Logic)
+![Activity Flow](./system-architecture/activity.svg)
+
+### Class Structure
+![Class Diagram](./system-architecture/class.svg)
 
 ### 5. Running the Mobile Probe
 

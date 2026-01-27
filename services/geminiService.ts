@@ -1,10 +1,13 @@
 import { GoogleGenAI, Type, Modality } from "@google/genai";
 import { BioBlueprint } from "../types";
 
-const GEMINI_API_KEY = "AIzaSyCajRzBOdjI2BsfwnkSDs0z5CMiTmgwELo";
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
 
 export class GeminiService {
   private static getClient() {
+    if (!GEMINI_API_KEY) {
+      console.error("Gemini API Key is missing! Set VITE_GEMINI_API_KEY in .env");
+    }
     return new GoogleGenAI({ apiKey: GEMINI_API_KEY });
   }
 

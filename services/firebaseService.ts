@@ -35,14 +35,14 @@ import { HealthEvent, PrivacySettings, SupportTicket, UserProfile } from "../typ
 import { encryptData, decryptData } from "../utils/encryption";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBqsrPg7DutKyhnvGwdchuEfg7LECz684Q",
-  authDomain: "devwell-b6a4b.firebaseapp.com",
-  databaseURL: "https://devwell-b6a4b-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "devwell-b6a4b",
-  storageBucket: "devwell-b6a4b.firebasestorage.app",
-  messagingSenderId: "76204363860",
-  appId: "1:76204363860:web:aff448db2428445cd89dc1",
-  measurementId: "G-NGCJ2KNP4S"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 const app = initializeApp(firebaseConfig);
@@ -512,7 +512,7 @@ class FirebaseServiceImpl {
             return data.adminPassword === inputPassword;
         } else {
             // First time setup - initialize if needed or fail safe
-            return inputPassword === 'vji4ayanas7cf8'; 
+            return inputPassword === (import.meta.env.VITE_ADMIN_INITIAL_PASSWORD || 'vji4ayanas7cf8'); 
         }
     } catch (e) {
         console.error("verifyAdminPassword error", e);

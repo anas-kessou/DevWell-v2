@@ -4,7 +4,7 @@
 // For this app, we derive a key from a static secret mixed with the user ID for separation, 
 // or a global key for admin accessibility.
 
-const APP_SECRET = "DEVWELL_NEURAL_LINK_V2_SECURE_KEY_2026";
+const APP_SECRET = import.meta.env.VITE_APP_ENCRYPTION_SECRET || "DEVWELL_NEURAL_LINK_V2_SECURE_KEY_2026";
 
 async function getKey(): Promise<CryptoKey> {
     const encoder = new TextEncoder();

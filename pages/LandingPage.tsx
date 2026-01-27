@@ -34,7 +34,7 @@ const LandingPage: React.FC = () => {
           <span>DevWell</span>
         </div>
         <div className="hidden md:flex items-center gap-8 text-slate-400 font-black text-[10px] uppercase tracking-[0.2em]">
-          <button onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })} className="hover:text-blue-500 transition-colors bg-transparent border-none cursor-pointer uppercase font-black tracking-[0.2em] text-[10px] text-slate-400">{t('features')}</button>
+          <button onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })} className="hover:text-blue-500 transition-colors bg-transparent border-none cursor-pointer uppercase font-black tracking-[0.2em] text-[10px] text-slate-400">{t('navFeatures')}</button>
           <Link to="/about" state={{ from: 'landing' }} className="hover:text-blue-500 transition-colors">{t('about')}</Link>
           <Link to="/wellness" state={{ from: 'landing' }} className="hover:text-blue-500 transition-colors">{t('wellnessHub')}</Link>
           <button onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })} className="hover:text-blue-500 transition-colors bg-transparent border-none cursor-pointer uppercase font-black tracking-[0.2em] text-[10px] text-slate-400">{t('howItWorks')}</button>
@@ -53,7 +53,7 @@ const LandingPage: React.FC = () => {
         {/* Mobile Menu */}
         {mobileMenuOpen && (
            <div className="absolute top-full left-0 w-full bg-slate-950 border-b border-white/5 p-6 md:hidden flex flex-col gap-6 shadow-2xl animate-in slide-in-from-top-5">
-              <button onClick={() => {document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }); setMobileMenuOpen(false)}} className="text-left text-sm font-bold text-slate-400 hover:text-white uppercase tracking-widest bg-transparent border-none p-0">{t('features')}</button>
+              <button onClick={() => {document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }); setMobileMenuOpen(false)}} className="text-left text-sm font-bold text-slate-400 hover:text-white uppercase tracking-widest bg-transparent border-none p-0">{t('navFeatures')}</button>
               <Link to="/about" className="text-sm font-bold text-slate-400 hover:text-white uppercase tracking-widest">{t('about')}</Link>
               <Link to="/wellness" className="text-sm font-bold text-slate-400 hover:text-white uppercase tracking-widest">{t('wellnessHub')}</Link>
               <button onClick={() => {document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' }); setMobileMenuOpen(false)}} className="text-left text-sm font-bold text-slate-400 hover:text-white uppercase tracking-widest bg-transparent border-none p-0">{t('howItWorks')}</button>
@@ -156,42 +156,42 @@ const LandingPage: React.FC = () => {
               icon: <Eye className="text-blue-500" />, 
               title: t('detailedFeatures.vision-biometrics.title'), 
               desc: t('detailedFeatures.vision-biometrics.desc'),
-              label: "Vision" 
+              label: t('detailedFeatures.featureLabels.vision') 
             },
             { 
               id: 'vocal-stress-probe',
               icon: <Radio className="text-magenta-500" />, 
               title: t('detailedFeatures.vocal-stress-probe.title'), 
               desc: t('detailedFeatures.vocal-stress-probe.desc'),
-              label: "Audio" 
+              label: t('detailedFeatures.featureLabels.audio') 
             },
             { 
               id: 'predictive-burnout',
               icon: <Brain className="text-indigo-400" />, 
               title: t('detailedFeatures.predictive-burnout.title'), 
               desc: t('detailedFeatures.predictive-burnout.desc'),
-              label: "Cognitive" 
+              label: t('detailedFeatures.featureLabels.cognitive') 
             },
             { 
               id: 'privacy-core',
               icon: <Lock className="text-emerald-400" />, 
               title: t('detailedFeatures.privacy-core.title'), 
               desc: t('detailedFeatures.privacy-core.desc'),
-              label: "Security" 
+              label: t('detailedFeatures.featureLabels.security') 
             },
             { 
               id: 'adhd-hub',
               icon: <MessageSquare className="text-orange-400" />, 
               title: t('detailedFeatures.adhd-hub.title'), 
               desc: t('detailedFeatures.adhd-hub.desc'),
-              label: "Focus" 
+              label: t('detailedFeatures.featureLabels.focus') 
             },
             { 
               id: 'platform-root',
               icon: <BarChart3 className="text-cyan-400" />, 
               title: t('detailedFeatures.platform-root.title'), 
               desc: t('detailedFeatures.platform-root.desc'),
-              label: "Data" 
+              label: t('detailedFeatures.featureLabels.data') 
             }
           ].map((feature, i) => (
             <Link key={i} to={`/feature/${feature.id}`} state={{ from: 'landing' }} className="block">

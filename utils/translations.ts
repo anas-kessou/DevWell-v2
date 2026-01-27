@@ -3,7 +3,13 @@ export type Language = keyof typeof translations;
 export const translations = {
   en: {
     // Navigation
-    features: "Features",
+    navFeatures: "Features",
+    features: {
+      role: "The Role",
+      importance: "Why it Matters",
+      technical: "Technical Details",
+      notFound: "Feature Not Found"
+    },
     about: "About",
     wellnessHub: "Wellness Hub",
     howItWorks: "How it Works",
@@ -221,11 +227,77 @@ export const translations = {
         daily: "Daily",
         level: "Level"
       }
-    }
+    },
+    
+    // Feature Details
+    detailedFeatures: {
+      featureLabels: {
+        vision: "Vision",
+        audio: "Audio",
+        cognitive: "Cognitive",
+        security: "Security",
+        focus: "Focus",
+        data: "Data"
+      },
+      "vision-biometrics": {
+        title: "Vision Biometrics",
+        purpose: "Analyzes eye movement patterns to detect cognitive load overload.",
+        desc: "Analyzes eye movement patterns to detect cognitive load overload.",
+        role: "Maintains a constant stream of visual health data.",
+        importance: "Prevents digital eye strain and long-term vision degradation.",
+        technical: "Uses MediaPipe for 478-point facial landmark detection at 30fps."
+      },
+      "vocal-stress-probe": {
+        title: "Vocal Stress Probe",
+        purpose: "Monitors voice tone and pitch to identify stress markers.",
+        desc: "Monitors voice tone and pitch to identify stress markers.",
+        role: "Acts as an auditory guardian for your mental state.",
+        importance: "Vocal cords tighten under stress often before you feel it.",
+        technical: "FFT analysis of vocal frequencies in real-time."
+      },
+      "predictive-burnout": {
+        title: "Predictive Burnout",
+        purpose: "Forecasts energy crashes before they happen.",
+        desc: "Forecasts energy crashes before they happen.",
+        role: "Strategic planner for your energy reserves.",
+        importance: "Recovery is easier when you stop before hitting zero.",
+        technical: "LSTM model trained on thousands of developer sessions."
+      },
+      "privacy-core": {
+        title: "Privacy Core",
+        purpose: "Ensures no raw biometric data leaves your device.",
+        desc: "Ensures no raw biometric data leaves your device.",
+        role: "The vault that keeps your data yours.",
+        importance: "Health data is sensitive; we treat it as such.",
+        technical: "Local processing with ephemeral memory buffers."
+      },
+      "adhd-hub": {
+        title: "ADHD Hub",
+        purpose: "Specialized environment for neurodivergent focus.",
+        desc: "Specialized environment for neurodivergent focus.",
+        role: "Filters out distractions and maintains dopamine loops.",
+        importance: "Standard interfaces can be overwhelming for some.",
+        technical: "Dynamic UI contrast and gamified feedback loops."
+      },
+      "platform-root": {
+        title: "Platform Root",
+        purpose: "Central command for all your wellness metrics.",
+        desc: "Central command for all your wellness metrics.",
+        role: "Historian of your health journey.",
+        importance: "You play how you practice; see your trends.",
+        technical: "Firestore real-time sync with offline persistence."
+      }
+    },
   },
   fr: {
     // Navigation
-    features: "Fonctionnalités",
+    navFeatures: "Fonctionnalités",
+    features: {
+      role: "Le Rôle",
+      importance: "Pourquoi c'est important",
+      technical: "Détails Techniques",
+      notFound: "Fonctionnalité Introuvable"
+    },
     about: "À propos",
     wellnessHub: "Centre de bien-être",
     howItWorks: "Comment ça marche",
@@ -379,25 +451,25 @@ export const translations = {
     processing: "Traitement...",
     
     // About
-    returnHome: "العودة للرئيسية",
-    aboutDevWell: "حول DevWell",
-    builtFor: "بنينا هذا من أجل",
-    lateNights: "الليالي المتأخرة.",
-    aboutMission: "ولد DevWell من ملاحظة بسيطة: هندسة البرمجيات هي رياضة تحمل، لكننا نعاملها مثل سباق 100 متر. أردنا بناء أداة تفهم الإنسان خلف لوحة المفاتيح.",
-    empathyFirst: "التعاطف أولاً",
-    empathyDesc: "تم بناء معظم أدوات الإنتاجية لاستخراج المزيد من القيمة. تم بناء DevWell للحفاظ على قيمتك. نحن نعطي الأولوية للعافية على الإنتاج، لأننا نعلم أن الإنتاج عالي الجودة هو نتاج ثانوي لعقل سليم.",
-    intelligenceGood: "الذكاء للخير",
-    intelligenceDesc: "باستخدام قوة Gemini متعددة الوسائط، يمكننا اكتشاف علامات التعب الدقيق التي قد لا يكون المستخدم على دراية بها بعد. إنه مثل وجود مدرب صحي عالمي يراقبك.",
+    returnHome: "Retour Accueil",
+    aboutDevWell: "À propos de DevWell",
+    builtFor: "Conçu pour les",
+    lateNights: "nuits blanches.",
+    aboutMission: "DevWell est né d'un constat simple : le génie logiciel est un sport d'endurance, mais nous le traitons comme un sprint de 100m. Nous voulions créer un outil qui comprend l'humain derrière le clavier.",
+    empathyFirst: "L'Empathie d'Abord",
+    empathyDesc: "La plupart des outils de productivité sont conçus pour extraire plus de valeur. DevWell est conçu pour préserver la vôtre. Nous privilégions le bien-être à la production, car nous savons qu'une production de qualité est le sous-produit d'un esprit sain.",
+    intelligenceGood: "L'Intelligence pour le Bien",
+    intelligenceDesc: "En utilisant la puissance multimodale de Gemini, nous pouvons détecter des marqueurs de micro-fatigue dont l'utilisateur n'a même pas encore conscience. C'est comme avoir un coach de santé de classe mondiale qui veille sur vous.",
 
     // Wellness
-    wellnessResources: "موارد العافية",
-    devWellnessHub: "مركز عافية المطورين",
-    wellnessHeroDesc: "بروتوكولات مدعومة علمياً للحفاظ على تزامن بيولوجيتك مع قاعدة الكود الخاصة بك.",
-    visionSecurity: "أمان الرؤية",
-    rule202020: "قاعدة 20-20-20",
-    rule20Desc: "إجهاد العين الرقمي هو الشكوى رقم 1 للمطورين الحديثين. كل 20 دقيقة، انظر إلى شيء على بعد 20 قدماً لمدة 20 ثانية. هذا يريح العضلة الهدبية ويحافظ على حدة رؤيتك.",
-    reducesHeadaches: "يقلل الصداع",
-    preventsFocusShift: "Empêche le changement de focus permanent",
+    wellnessResources: "Ressources Bien-être",
+    devWellnessHub: "Le Hub Bien-être Dév",
+    wellnessHeroDesc: "Des protocoles validés scientifiquement pour garder votre biologie synchronisée avec votre base de code.",
+    visionSecurity: "Sécurité Visuelle",
+    rule202020: "La Règle 20-20-20",
+    rule20Desc: "La fatigue oculaire numérique est la plainte n°1 des développeurs modernes. Toutes les 20 minutes, regardez quelque chose à 20 pieds (6m) pendant 20 secondes. Cela détend le muscle ciliaire et garde votre vision nette.",
+    reducesHeadaches: "Réduit les maux de tête",
+    preventsFocusShift: "Prévient le changement de focus permanent",
     resetsPressure: "Réinitialise la pression oculaire",
 
     dashboard: {
@@ -443,11 +515,77 @@ export const translations = {
         daily: "Quotidien",
         level: "Niveau"
       }
-    }
+    },
+    
+    // Feature Details
+    detailedFeatures: {
+      featureLabels: {
+        vision: "Vision",
+        audio: "Audio",
+        cognitive: "Cognitif",
+        security: "Sécurité",
+        focus: "Focus",
+        data: "Données"
+      },
+      "vision-biometrics": {
+        title: "Biométrie Visuelle",
+        purpose: "Analyse les mouvements oculaires pour détecter la surcharge cognitive.",
+        desc: "Analyse les mouvements oculaires pour détecter la surcharge cognitive.",
+        role: "Maintient un flux constant de données sur la santé visuelle.",
+        importance: "Prévient la fatigue oculaire numérique et la dégradation de la vision.",
+        technical: "Utilise MediaPipe pour la détection de 478 points faciaux à 30fps."
+      },
+      "vocal-stress-probe": {
+        title: "Sonde de Stress Vocal",
+        purpose: "Surveille le ton et la hauteur de la voix pour identifier les marqueurs de stress.",
+        desc: "Surveille le ton et la hauteur de la voix pour identifier les marqueurs de stress.",
+        role: "Agit comme un gardien auditif pour votre état mental.",
+        importance: "Les cordes vocales se resserrent sous le stress avant même que vous ne le sentiez.",
+        technical: "Analyse FFT des fréquences vocales en temps réel."
+      },
+      "predictive-burnout": {
+        title: "Burnout Prédictif",
+        purpose: "Prévoit les chutes d'énergie avant qu'elles ne surviennent.",
+        desc: "Prévoit les chutes d'énergie avant qu'elles ne surviennent.",
+        role: "Planificateur stratégique de vos réserves d'énergie.",
+        importance: "La récupération est plus facile quand on s'arrête avant d'atteindre zéro.",
+        technical: "Modèle LSTM entraîné sur des milliers de sessions de développeurs."
+      },
+      "privacy-core": {
+        title: "Cœur de Confidentialité",
+        purpose: "Garantit qu'aucune donnée biométrique brute ne quitte votre appareil.",
+        desc: "Garantit qu'aucune donnée biométrique brute ne quitte votre appareil.",
+        role: "Le coffre-fort qui garde vos données à vous.",
+        importance: "Les données de santé sont sensibles ; nous les traitons comme telles.",
+        technical: "Traitement local avec tampons de mémoire éphémères."
+      },
+      "adhd-hub": {
+        title: "Hub TDAH",
+        purpose: "Environnement spécialisé pour la concentration neurodivergente.",
+        desc: "Environnement spécialisé pour la concentration neurodivergente.",
+        role: "Filtre les distractions et maintient les boucles de dopamine.",
+        importance: "Les interfaces standard peuvent être écrasantes pour certains.",
+        technical: "Contraste UI dynamique et boucles de rétroaction ludifiées."
+      },
+      "platform-root": {
+        title: "Racine de Plateforme",
+        purpose: "Commande centrale pour toutes vos métriques de bien-être.",
+        desc: "Commande centrale pour toutes vos métriques de bien-être.",
+        role: "Historien de votre parcours de santé.",
+        importance: "Vous jouez comme vous vous entraînez ; voyez vos tendances.",
+        technical: "Synchro Firestore en temps réel avec persistance hors ligne."
+      }
+    },
   },
   ar: {
     // Navigation
-    features: "المميزات",
+    navFeatures: "المميزات",
+    features: {
+      role: "الدور",
+      importance: "لماذا هذا مهم",
+      technical: "تفاصيل تقنية",
+      notFound: "الميزة غير موجودة"
+    },
     about: "حول",
     wellnessHub: "مركز العافية",
     howItWorks: "كيف يعمل",
@@ -665,7 +803,67 @@ export const translations = {
         daily: "يومي",
         level: "مستوى"
       }
-    }
+    },
+    
+    // Feature Details
+    detailedFeatures: {
+      featureLabels: {
+        vision: "الرؤية",
+        audio: "الصوت",
+        cognitive: "إدراكي",
+        security: "الأمان",
+        focus: "التركيز",
+        data: "البيانات"
+      },
+      "vision-biometrics": {
+        title: "القياسات الحيوية البصرية",
+        purpose: "يحلل أنماط حركة العين للكشف عن الحمل المعرفي الزائد.",
+        desc: "يحلل أنماط حركة العين للكشف عن الحمل المعرفي الزائد.",
+        role: "يحافظ على تدفق مستمر لبيانات صحة الرؤية.",
+        importance: "يمنع إجهاد العين الرقمي وتدهور الرؤية على المدى الطويل.",
+        technical: "يستخدم MediaPipe للكشف عن 478 نقطة في الوجه بمعدل 30 إطاراً في الثانية."
+      },
+      "vocal-stress-probe": {
+        title: "مسبار التوتر الصوتي",
+        purpose: "يراقب نبرة وطبقة الصوت لتحديد علامات التوتر.",
+        desc: "يراقب نبرة وطبقة الصوت لتحديد علامات التوتر.",
+        role: "يعمل كحارس سمعي لحالتك النفسية.",
+        importance: "تشد الحبال الصوتية تحت الضغط غالباً قبل أن تشعر به.",
+        technical: "تحليل FFT للترددات الصوتية في الوقت الحقيقي."
+      },
+      "predictive-burnout": {
+        title: "التنبؤ بالاحتراق النفسي",
+        purpose: "يتوقع انهيار الطاقة قبل حدوثه.",
+        desc: "يتوقع انهيار الطاقة قبل حدوثه.",
+        role: "مخطط استراتيجي لاحتياطيات الطاقة الخاصة بك.",
+        importance: "يكون التعافي أسهل عندما تتوقف قبل الوصول إلى الصفر.",
+        technical: "نموذج LSTM مدرب على آلاف جلسات المطورين."
+      },
+      "privacy-core": {
+        title: "نواة الخصوصية",
+        purpose: "يضمن عدم خروج أي بيانات حيوية خام من جهازك.",
+        desc: "يضمن عدم خروج أي بيانات حيوية خام من جهازك.",
+        role: "الخزنة التي تحافظ على بياناتك ملكاً لك.",
+        importance: "البيانات الصحية حساسة؛ ونحن نتعامل معها على هذا الأساس.",
+        technical: "معالجة محلية مع مخازن ذاكرة مؤقتة وتشفير."
+      },
+      "adhd-hub": {
+        title: "مركز تشتت الانتباه",
+        purpose: "بيئة مخصصة للتركيز العصبي المتنوع.",
+        desc: "بيئة مخصصة للتركيز العصبي المتنوع.",
+        role: "يصفي المشتتات ويحافظ على حلقات الدوبامين.",
+        importance: "يمكن أن تكون الواجهات القياسية ساحقة للبعض.",
+        technical: "تباين ديناميكي للواجهة وحلقات تغذية راجعة محفزة."
+      },
+      "platform-root": {
+        title: "جذر المنصة",
+        purpose: "القيادة المركزية لجميع مقاييس العافية الخاصة بك.",
+        desc: "القيادة المركزية لجميع مقاييس العافية الخاصة بك.",
+        role: "مؤرخ لرحلتك الصحية.",
+        importance: "أنت تلعب كما تتدرب؛ شاهد اتجاهاتك.",
+        technical: "مزامنة Firestore في الوقت الحقيقي مع استمرارية دون اتصال."
+      }
+    },
   },
   // Admin & Analytics
   admin: {
