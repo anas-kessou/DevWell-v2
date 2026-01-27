@@ -65,36 +65,38 @@ const CameraMonitor = forwardRef<CameraMonitorHandle, Props>(({ onEventDetected,
   useEffect(() => {
     if (!remoteSessionId) return;
 
-    const unsubStatus = FirebaseService.onSessionStatusChange(remoteSessionId, (source) => {
-        setActiveSource(source);
-        
-        if (source === 'mobile') {
-            // Mobile took control -> Stop Local
-            if (videoRef.current?.srcObject) {
-                const stream = videoRef.current.srcObject as MediaStream;
-                stream.getTracks().forEach(t => t.stop());
-                videoRef.current.srcObject = null;
-            }
-            setIsMonitoring(true); // "Monitoring" but via remote
-        } else if (source === 'web') {
-            // Web took control -> If we aren't running local, start local? 
-            // Or just allow user to start local manually.
-            // If we receive 'web' that means WE presumably set it, or another tab.
-            // If it's us, we are already running.
-        } else {
-            // Idle
-        }
-    });
-
     const unsubData = FirebaseService.onSessionDataChange(remoteSessionId, (data) => {
-         if (data?.image) {
-             setRemoteImage(data.image);
-         }
+        if (data) {
+            // Handle Status / Active Source
+            const source = data.activeSource;
+            setActiveSource(source);
+
+            if (source === 'mobile') {
+                // Mobile took control -> Stop Local
+                if (videoRef.current?.srcObject) {
+                    const stream = videoRef.current.srcObject as MediaStream;
+                    stream.getTracks().forEach(t => t.stop());
+                    videoRef.current.srcObject = null;
+                }
+                setIsMonitoring(true); // "Monitoring" but via remote
+            } else if (source === 'web') {
+                // Web took control -> If we aren't running local, start local? 
+                // Or just allow user to start local manually.
+                // If we receive 'web' that means WE presumably set it, or another tab.
+                // If it's us, we are already running.
+            } else {
+                // Idle
+            }
+
+            // Handle Image Data
+            if (data.image) {
+                setRemoteImage(data.image);
+            }
+        }
     });
 
     // Default to 'active' on connect if we initiated
     return () => {
-        unsubStatus();
         unsubData();
     };
   }, [remoteSessionId, setIsMonitoring]);

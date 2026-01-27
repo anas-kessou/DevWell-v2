@@ -26,8 +26,8 @@ const LandingPage: React.FC = () => {
   return (
     <div className="bg-slate-950 text-white min-h-screen selection:bg-blue-500/30">
       {/* Navigation */}
-      <nav className="flex items-center justify-between px-6 py-6 max-w-7xl mx-auto sticky top-0 z-50 bg-slate-950/80 backdrop-blur-xl border-b border-white/5">
-        <div className="flex items-center gap-2 font-bold text-2xl tracking-tighter">
+      <nav className="flex items-center justify-between px-4 py-4 lg:px-6 lg:py-6 max-w-7xl mx-auto sticky top-0 z-50 bg-slate-950/80 backdrop-blur-xl border-b border-white/5">
+        <div className="flex items-center gap-2 font-bold text-xl lg:text-2xl tracking-tighter">
           <div className="bg-blue-600 p-2 rounded-lg shadow-lg shadow-blue-600/20">
             <Activity size={24} className="text-white" />
           </div>
@@ -66,42 +66,42 @@ const LandingPage: React.FC = () => {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative px-8 pt-24 pb-32 max-w-7xl mx-auto text-center overflow-hidden">
+      <section className="relative px-6 pt-12 pb-16 lg:pt-24 lg:pb-32 max-w-7xl mx-auto text-center overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-blue-600/10 blur-[120px] rounded-full -z-10" />
         
         <div className="inline-flex items-center gap-2 bg-blue-600/10 border border-blue-500/20 px-4 py-2 rounded-full mb-8 animate-in fade-in slide-in-from-top-4 duration-700">
           <Sparkles size={14} className="text-blue-400" />
-          <span className="text-[10px] font-black uppercase tracking-widest text-blue-400">{t('poweredBy')}</span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-blue-400">{t('landing.poweredBy')}</span>
         </div>
 
-        <h1 className="text-6xl md:text-8xl font-black mb-8 bg-gradient-to-b from-white via-white to-slate-500 bg-clip-text text-transparent leading-[1.1] tracking-tighter">
-          {t('heroTitle')}
+        <h1 className="text-4xl sm:text-6xl md:text-8xl font-black mb-8 bg-gradient-to-b from-white via-white to-slate-500 bg-clip-text text-transparent leading-[1.1] tracking-tighter">
+          {t('landing.heroTitle')}
         </h1>
-        <p className="text-slate-400 text-xl max-w-2xl mx-auto mb-12 leading-relaxed font-medium">
-          {t('heroSubtitle')}
+        <p className="text-slate-400 text-lg sm:text-xl max-w-2xl mx-auto mb-12 leading-relaxed font-medium">
+          {t('landing.heroSubtitle')}
         </p>
         
         <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
           <Link to="/register" className="w-full sm:w-auto bg-white text-slate-950 px-10 py-5 rounded-full font-black uppercase tracking-widest text-sm flex items-center justify-center gap-2 group hover:scale-105 transition-all shadow-2xl shadow-white/10">
-            {t('startNeuralSync')} {dir === 'ltr' ? <ChevronRight className="group-hover:translate-x-1 transition-transform" /> : <ChevronRight className="group-hover:-translate-x-1 transition-transform rotate-180" />}
+            {t('landing.startNeuralSync')} {dir === 'ltr' ? <ChevronRight className="group-hover:translate-x-1 transition-transform" /> : <ChevronRight className="group-hover:-translate-x-1 transition-transform rotate-180" />}
           </Link>
           <button onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })} className="w-full sm:w-auto border border-slate-700 hover:border-slate-500 px-10 py-5 rounded-full font-black uppercase tracking-widest text-sm transition-all bg-slate-900/40 backdrop-blur-sm cursor-pointer text-white">
-            {t('viewProtocol')}
+            {t('landing.viewProtocol')}
           </button>
         </div>
 
-        <div className="mt-24 border border-white/5 rounded-[48px] overflow-hidden shadow-2xl relative bg-slate-900/20 backdrop-blur-sm p-4">
-          <div className="bg-slate-950 rounded-[40px] overflow-hidden border border-white/10 relative aspect-[21/9]">
+        <div className="mt-16 lg:mt-24 border border-white/5 rounded-[24px] lg:rounded-[48px] overflow-hidden shadow-2xl relative bg-slate-900/20 backdrop-blur-sm p-2 lg:p-4">
+          <div className="bg-slate-950 rounded-[20px] lg:rounded-[40px] overflow-hidden border border-white/10 relative aspect-[16/9] lg:aspect-[21/9]">
             <img src="https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&q=80&w=2070" alt="Dashboard Preview" className="w-full h-full object-cover opacity-40 mix-blend-luminosity" />
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent" />
-            <div className="absolute inset-0 flex items-center justify-center">
-                <div className="glass-card p-8 rounded-3xl border border-blue-500/20 max-w-lg text-left space-y-4">
+            <div className="absolute inset-0 flex items-center justify-center p-6">
+                <div className="glass-card p-6 lg:p-8 rounded-3xl border border-blue-500/20 max-w-lg text-left space-y-4 bg-slate-950/80 backdrop-blur-xl">
                     <div className="flex items-center gap-2 text-blue-500">
                         <ActivityIcon size={16} className="animate-pulse" />
-                        <span className="text-[10px] font-black uppercase tracking-widest">{t('systemStatus')}</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest">{t('landing.systemStatus')}</span>
                     </div>
-                    <h3 className="text-2xl font-black tracking-tight">{t('biometricActive')}</h3>
-                    <p className="text-xs text-slate-400 font-medium">{t('biometricDesc')}</p>
+                    <h3 className="text-xl lg:text-2xl font-black tracking-tight">{t('landing.biometricActive')}</h3>
+                    <p className="text-xs text-slate-400 font-medium line-clamp-2 lg:line-clamp-none">{t('landing.biometricDesc')}</p>
                 </div>
             </div>
           </div>
@@ -109,30 +109,30 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* How It Works Section */}
-      <section id="how-it-works" className="px-8 py-32 bg-slate-900 overflow-hidden relative border-y border-white/5">
+      <section id="how-it-works" className="px-6 py-16 lg:py-32 bg-slate-900 overflow-hidden relative border-y border-white/5">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-900/20 via-slate-950 to-slate-950 -z-10" />
         
-        <div className="max-w-7xl mx-auto mb-20 text-center">
-            <h2 className="text-xs font-black text-blue-500 uppercase tracking-[0.5em] mb-4">{t('processTitle')}</h2>
-            <h3 className="text-4xl md:text-5xl font-black tracking-tighter mb-6">{t('processHeading')}</h3>
+        <div className="max-w-7xl mx-auto mb-16 lg:mb-20 text-center">
+            <h2 className="text-xs font-black text-blue-500 uppercase tracking-[0.5em] mb-4">{t('landing.processTitle')}</h2>
+            <h3 className="text-3xl lg:text-5xl font-black tracking-tighter mb-6">{t('landing.processHeading')}</h3>
             <Link to="/docs" state={{ from: 'landing' }} className="inline-flex items-center gap-2 text-sm font-black uppercase tracking-widest text-slate-400 hover:text-blue-500 transition-colors group">
-              {t('learnMore')} {dir === 'ltr' ? <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" /> : <ChevronRight size={14} className="group-hover:-translate-x-1 transition-transform rotate-180" />}
+              {t('landing.learnMore')} {dir === 'ltr' ? <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" /> : <ChevronRight size={14} className="group-hover:-translate-x-1 transition-transform rotate-180" />}
             </Link>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-12 max-w-7xl mx-auto relative">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-12 max-w-7xl mx-auto relative">
             <div className={`absolute top-12 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-blue-500/20 to-transparent hidden md:block`} />
 
             {[
-                { step: "01", title: t('step1Title'), desc: t('step1Desc') },
-                { step: "02", title: t('step2Title'), desc: t('step2Desc') },
-                { step: "03", title: t('step3Title'), desc: t('step3Desc') }
+                { step: "01", title: t('landing.step1Title'), desc: t('landing.step1Desc') },
+                { step: "02", title: t('landing.step2Title'), desc: t('landing.step2Desc') },
+                { step: "03", title: t('landing.step3Title'), desc: t('landing.step3Desc') }
             ].map((item, i) => (
                 <div key={i} className="relative z-10 text-center group">
-                    <div className="w-24 h-24 mx-auto bg-slate-950 rounded-3xl border border-white/10 flex items-center justify-center mb-8 shadow-2xl group-hover:scale-110 transition-transform group-hover:border-blue-500/50">
-                        <span className="text-3xl font-black text-white/20 group-hover:text-blue-500 transition-colors">{item.step}</span>
+                    <div className="w-20 h-20 lg:w-24 lg:h-24 mx-auto bg-slate-950 rounded-3xl border border-white/10 flex items-center justify-center mb-8 shadow-2xl group-hover:scale-110 transition-transform group-hover:border-blue-500/50">
+                        <span className="text-2xl lg:text-3xl font-black text-white/20 group-hover:text-blue-500 transition-colors">{item.step}</span>
                     </div>
-                    <h4 className="text-xl font-black uppercase mb-4 tracking-tight">{item.title}</h4>
+                    <h4 className="text-lg lg:text-xl font-black uppercase mb-4 tracking-tight">{item.title}</h4>
                     <p className="text-sm text-slate-400 font-medium leading-relaxed max-w-xs mx-auto">{item.desc}</p>
                 </div>
             ))}
@@ -140,62 +140,62 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* Comprehensive Features Grid */}
-      <section id="features" className="px-8 py-32 bg-slate-950 relative overflow-hidden">
+      <section id="features" className="px-6 py-16 lg:py-32 bg-slate-950 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/5 blur-[100px] rounded-full" />
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-indigo-600/5 blur-[100px] rounded-full" />
         
-        <div className="max-w-7xl mx-auto text-center mb-24">
+        <div className="max-w-7xl mx-auto text-center mb-16 lg:mb-24">
           <h2 className="text-xs font-black text-blue-500 uppercase tracking-[0.5em] mb-4">The Neural Protocol</h2>
-          <h3 className="text-4xl md:text-5xl font-black mb-6 tracking-tighter">Everything you need to <br /> stay in the flow.</h3>
+          <h3 className="text-3xl lg:text-5xl font-black mb-6 tracking-tighter">Everything you need to <br /> stay in the flow.</h3>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 max-w-7xl mx-auto">
           {[
             { 
               id: 'vision-biometrics',
               icon: <Eye className="text-blue-500" />, 
-              title: "Vision Biometrics", 
-              desc: "Real-time analysis of blinking frequency, yawning, and posture using Gemini's multimodal vision capabilities.",
+              title: t('detailedFeatures.vision-biometrics.title'), 
+              desc: t('detailedFeatures.vision-biometrics.desc'),
               label: "Vision" 
             },
             { 
               id: 'vocal-stress-probe',
               icon: <Radio className="text-magenta-500" />, 
-              title: "Vocal Stress Probe", 
-              desc: "Deep analysis of tone, breathing patterns, and speech speed to detect burnout before it manifests physically.",
+              title: t('detailedFeatures.vocal-stress-probe.title'), 
+              desc: t('detailedFeatures.vocal-stress-probe.desc'),
               label: "Audio" 
             },
             { 
               id: 'predictive-burnout',
               icon: <Brain className="text-indigo-400" />, 
-              title: "Predictive Burnout", 
-              desc: "Advanced neural forecasting that predicts your burnout risk 4 hours into the future based on activity logs.",
+              title: t('detailedFeatures.predictive-burnout.title'), 
+              desc: t('detailedFeatures.predictive-burnout.desc'),
               label: "Cognitive" 
             },
             { 
               id: 'privacy-core',
               icon: <Lock className="text-emerald-400" />, 
-              title: "Privacy Core", 
-              desc: "Full local scrubbing and PII-stripping protocols. Your biometric data never leaves your control.",
+              title: t('detailedFeatures.privacy-core.title'), 
+              desc: t('detailedFeatures.privacy-core.desc'),
               label: "Security" 
             },
             { 
               id: 'adhd-hub',
               icon: <MessageSquare className="text-orange-400" />, 
-              title: "ADHD Hub", 
-              desc: "An specialized focus mode with simplified UI and auditory micro-stretches to keep divergent minds on track.",
+              title: t('detailedFeatures.adhd-hub.title'), 
+              desc: t('detailedFeatures.adhd-hub.desc'),
               label: "Focus" 
             },
             { 
               id: 'platform-root',
               icon: <BarChart3 className="text-cyan-400" />, 
-              title: "Platform Root", 
-              desc: "Comprehensive analytics that show your long-term wellness trends and productivity correlations.",
+              title: t('detailedFeatures.platform-root.title'), 
+              desc: t('detailedFeatures.platform-root.desc'),
               label: "Data" 
             }
           ].map((feature, i) => (
             <Link key={i} to={`/feature/${feature.id}`} state={{ from: 'landing' }} className="block">
-              <div className="glass-card border border-white/5 p-10 rounded-[40px] hover:border-blue-500/30 transition-all group relative overflow-hidden h-full">
+              <div className="glass-card border border-white/5 p-6 lg:p-10 rounded-[32px] lg:rounded-[40px] hover:border-blue-500/30 transition-all group relative overflow-hidden h-full">
                 <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/5 blur-3xl rounded-full group-hover:bg-blue-500/10 transition-colors" />
                 <div className="bg-slate-900 border border-white/10 w-16 h-16 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform shadow-xl">
                   {feature.icon}
@@ -210,19 +210,19 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* Footer */}
-      <footer className="px-8 py-20 border-t border-white/5 bg-slate-950">
+      <footer className="px-6 py-10 lg:py-20 border-t border-white/5 bg-slate-950">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-10">
           <div className="flex items-center gap-2 font-bold text-xl tracking-tighter">
             <Activity size={24} className="text-blue-600" />
             <span>DevWell</span>
           </div>
-          <div className="flex gap-10 text-[10px] font-black uppercase tracking-widest text-slate-500">
+          <div className="flex flex-wrap justify-center gap-6 lg:gap-10 text-[10px] font-black uppercase tracking-widest text-slate-500">
             <Link to="/about" state={{ from: 'landing' }} className="hover:text-white transition-colors">About</Link>
             <Link to="/wellness" state={{ from: 'landing' }} className="hover:text-white transition-colors">Wellness Hub</Link>
             <a href="#" className="hover:text-white transition-colors">Twitter</a>
             <a href="#" className="hover:text-white transition-colors">GitHub</a>
           </div>
-          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-700">© 2026 Neural Wellness Protocol</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-700 text-center">© 2026 Neural Wellness Protocol</p>
         </div>
       </footer>
     </div>

@@ -219,27 +219,25 @@ const Settings: React.FC = () => {
                    <QrCode size={24} />
                 </div>
                 <div>
-                   <h3 className="text-xl font-black uppercase text-white">Neural Bridge</h3>
-                   <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Connect Mobile Sensor Node</p>
+                   <h3 className="text-xl font-black uppercase text-white">{t('settingsPage.neuralBridge.title')}</h3>
+                   <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">{t('settingsPage.neuralBridge.subtitle')}</p>
                 </div>
              </div>
 
              <div className="flex flex-col md:flex-row items-center gap-12">
                 <div className="flex-1 space-y-4">
                    <p className="text-sm text-slate-400 leading-relaxed">
-                     Offload visual processing to your mobile device's dedicated neural engine. This reduces CPU load on your main workstation and allows for flexible sensor placement.
+                     {t('settingsPage.neuralBridge.description')}
                    </p>
-                   <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">
-                     1. Open DevWell on your mobile device.<br/>
-                     2. Select "Link with Computer" on login.<br/>
-                     3. Scan this neural imprint.
+                   <p className="text-xs font-bold text-slate-500 uppercase tracking-widest whitespace-pre-line">
+                     {t('settingsPage.neuralBridge.steps')}
                    </p>
                    {!syncSessionId && (
                       <button 
                         onClick={handleGenerateLink}
                         className="px-6 py-3 bg-indigo-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-colors"
                       >
-                        Generate Link Signal
+                        {t('settingsPage.neuralBridge.generate')}
                       </button>
                    )}
                 </div>
@@ -254,7 +252,7 @@ const Settings: React.FC = () => {
                           viewBox={`0 0 256 256`}
                         />
                       </div>
-                      <p className="text-[10px] font-black text-center text-slate-900 mt-2 uppercase tracking-tight opacity-50">Session: {syncSessionId.slice(0,8)}</p>
+                      <p className="text-[10px] font-black text-center text-slate-900 mt-2 uppercase tracking-tight opacity-50">{t('settingsPage.neuralBridge.session')}: {syncSessionId.slice(0,8)}</p>
                    </div>
                 )}
              </div>
@@ -320,20 +318,13 @@ const Settings: React.FC = () => {
                 <h3 className="text-sm font-bold">{t('logEncryption')}</h3>
                 <span className="text-[10px] font-black text-magenta-500 uppercase tracking-widest bg-magenta-500/10 px-3 py-1 rounded-lg">{t('active')}</span>
               </div>
-              <div className="grid grid-cols-3 gap-4">
-                {(['Standard', 'AES-256', 'Quantum-Resistant'] as const).map((level) => (
+              <div className="grid grid-cols-1 gap-4">
                   <button 
-                    key={level}
-                    onClick={() => updateEncryption(level)}
-                    className={`p-4 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all ${
-                      settings.encryptionLevel === level 
-                      ? 'bg-magenta-600/20 border-magenta-500 text-magenta-400' 
-                      : 'bg-white/5 border-transparent text-slate-500 hover:bg-white/10'
-                    }`}
+                    disabled
+                    className="p-4 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all bg-magenta-600/20 border-magenta-500 text-magenta-400 cursor-not-allowed opacity-80"
                   >
-                    {level === 'Standard' ? t('standard') : level === 'Quantum-Resistant' ? t('quantum') : level}
+                    AES-256 GCM (Enforced)
                   </button>
-                ))}
               </div>
             </div>
           </div>

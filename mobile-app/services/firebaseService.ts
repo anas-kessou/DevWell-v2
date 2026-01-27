@@ -6,6 +6,7 @@ import {
   updateDoc,
   onSnapshot
 } from "firebase/firestore";
+import { encryptData } from "../utils/encryption";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBqsrPg7DutKyhnvGwdchuEfg7LECz684Q",
@@ -46,12 +47,15 @@ class FirebaseService {
 
   async streamDataToHost(sessionId: string, frameData: string, metadata: any): Promise<void> {
     try {
+        const encryptedFrame = await encryptData(frameData);
+        
         const sessionRef = doc(db, "remote_sessions", sessionId);
         await updateDoc(sessionRef, {
             data: {
-                image: frameData,
+                image: encryptedFrame,
                 timestamp: Date.now(),
-                ...metadata
+                isEncrypted: true,
+                ...metadata // metadata (vocalTension) kept plain for performance/analytics or encrypt if needed
             },
             activeSource: 'mobile' // Implicitly set source to mobile when streaming
         });

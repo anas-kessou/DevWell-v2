@@ -11,9 +11,13 @@ import FeedbackForm from '../components/FeedbackForm';
 import FatigueLineGraph from '../components/FatigueLineGraph';
 import ProgressLineGraph from '../components/ProgressLineGraph';
 import WeeklyActivityChart from '../components/WeeklyActivityChart';
-import SpeedTestWidget from '../components/SpeedTestWidget';
 import FocusTrendChart from '../components/FocusTrendChart';
 import StressHeatmap from '../components/StressHeatmap';
+import PostureScoreChart from '../components/PostureScoreChart';
+import BreakComplianceChart from '../components/BreakComplianceChart';
+import CircadianRhythmChart from '../components/CircadianRhythmChart';
+import SkeletonLoader from '../components/SkeletonLoader';
+import Toast from '../components/Toast';
 import { HealthEvent, Severity, BurnoutForecast, BioBlueprint } from '../types';
 import { GeminiService } from '../services/geminiService';
 import { FirebaseService } from '../services/firebaseService';
@@ -47,6 +51,8 @@ const Dashboard: React.FC = () => {
   const [currentFatigue, setCurrentFatigue] = useState(0);
   const [weeklyActivity, setWeeklyActivity] = useState<any[]>([]);
   const [progressData, setProgressData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [toastMessage, setToastMessage] = useState<{msg: string, type: 'success' | 'error' | 'info'} | null>(null);
 
   // Calculate Focus Trend Data
   const focusTrendData = React.useMemo(() => {
@@ -131,47 +137,55 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     const unsubscribe = FirebaseService.onAuthChange(async (user) => {
       if (user) {
+        setLoading(true);
         setCurrentUser(user);
-        const [
-            firebaseEvents, 
-            userTier,
-            alerts24h,
-            fatigueData,
-            hourlyFatigueData,
-            activityData,
-            progData
-        ] = await Promise.all([
-          FirebaseService.getHealthEvents(user.uid),
-          FirebaseService.getUserSubscription(user.uid),
-          FirebaseService.get24HourAlerts(user.uid),
-          FirebaseService.getFatigueReadings(user.uid),
-          FirebaseService.getHourlyFatigueAverage(user.uid),
-          FirebaseService.get7DayActivity(user.uid),
-          FirebaseService.getProgressData(user.uid)
-        ]);
-        setEvents(firebaseEvents);
-        setDailyAlerts(alerts24h);
-        setFatigueReadings(fatigueData);
-        setHourlyFatigue(hourlyFatigueData);
-        setWeeklyActivity(activityData);
-        setProgressData(progData);
-        
-        // Calculate derived stats
-        if (fatigueData.length > 0) {
-            setCurrentFatigue(fatigueData[fatigueData.length - 1].level);
-            if (hourlyFatigueData.length > 0) {
-                 const avg = hourlyFatigueData.reduce((a, b) => a + b.avgFatigue, 0) / hourlyFatigueData.length;
-                 setDailyAvgFatigue(Math.round(avg * 10) / 10);
+        try {
+            const [
+                firebaseEvents, 
+                userTier,
+                alerts24h,
+                fatigueData,
+                hourlyFatigueData,
+                activityData,
+                progData
+            ] = await Promise.all([
+              FirebaseService.getHealthEvents(user.uid),
+              FirebaseService.getUserSubscription(user.uid),
+              FirebaseService.get24HourAlerts(user.uid),
+              FirebaseService.getFatigueReadings(user.uid),
+              FirebaseService.getHourlyFatigueAverage(user.uid),
+              FirebaseService.get7DayActivity(user.uid),
+              FirebaseService.getProgressData(user.uid)
+            ]);
+            setEvents(firebaseEvents);
+            setDailyAlerts(alerts24h);
+            setFatigueReadings(fatigueData);
+            setHourlyFatigue(hourlyFatigueData);
+            setWeeklyActivity(activityData);
+            setProgressData(progData);
+            
+            // Calculate derived stats
+            if (fatigueData.length > 0) {
+                setCurrentFatigue(fatigueData[fatigueData.length - 1].level);
+                if (hourlyFatigueData.length > 0) {
+                    const avg = hourlyFatigueData.reduce((a, b) => a + b.avgFatigue, 0) / hourlyFatigueData.length;
+                    setDailyAvgFatigue(Math.round(avg * 10) / 10);
+                }
             }
-        }
-        
-        // Calculate dynamic wellness score based on events
-        const newScore = Math.max(0, 100 - firebaseEvents.reduce((acc, e) => {
-          return acc + (e.severity === Severity.HIGH ? 10 : 4);
-        }, 0));
-        setWellnessScore(newScore);
+            
+            // Calculate dynamic wellness score based on events
+            const newScore = Math.max(0, 100 - firebaseEvents.reduce((acc, e) => {
+            return acc + (e.severity === Severity.HIGH ? 10 : 4);
+            }, 0));
+            setWellnessScore(newScore);
 
-        setTier(userTier);
+            setTier(userTier);
+        } catch (error) {
+            console.error(error);
+            setToastMessage({ msg: "Failed to load dashboard data.", type: "error" });
+        } finally {
+            setLoading(false);
+        }
       } else {
         // Enforce authentication
         navigate('/login');
@@ -193,8 +207,10 @@ const Dashboard: React.FC = () => {
     }
     
     // Better: just add to local state to avoid extra fetch if needed, but fetching ensures consistency
-    const firebaseEvents = await FirebaseService.getHealthEvents(currentUser.uid);
-    setEvents(firebaseEvents);
+    const newEvents = await FirebaseService.getHealthEvents(currentUser.uid);
+    setEvents(newEvents);
+    if (newEvents.length > 0)
+        setToastMessage({ msg: `New ${event.type} event detected`, type: "info" });
     
     setWellnessScore(prev => event.severity === Severity.HIGH ? Math.max(0, prev - 10) : Math.max(0, prev - 4));
   };
@@ -245,6 +261,13 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-950 text-slate-100 relative">
+      {toastMessage && (
+          <Toast 
+            message={toastMessage.msg} 
+            type={toastMessage.type} 
+            onClose={() => setToastMessage(null)} 
+          />
+      )}
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
         <div 
@@ -266,23 +289,17 @@ const Dashboard: React.FC = () => {
         
         <nav className="flex-1 px-8 space-y-3">
           <button onClick={() => navigate('/dashboard')} className={`w-full flex items-center gap-3 px-6 py-5 rounded-[24px] text-sm font-black transition-all ${location.pathname === '/dashboard' ? 'bg-blue-600 shadow-2xl shadow-blue-600/30' : 'text-slate-500 hover:bg-white/5'}`}>
-            <LayoutDashboard size={20} /> {t('dashboard')}
+            <LayoutDashboard size={20} /> {t('dashboard.title')}
           </button>
           <button onClick={() => navigate('/dashboard/settings')} className="w-full flex items-center gap-3 px-6 py-5 rounded-[24px] text-sm font-black text-slate-500 hover:bg-white/5 transition-all">
-            <SettingsIcon size={20} /> {t('settings')}
+            <SettingsIcon size={20} /> {t('dashboard.settings')}
           </button>
           <button onClick={() => navigate('/pricing', { state: { from: 'dashboard' } })} className="w-full flex items-center gap-3 px-6 py-5 rounded-[24px] text-sm font-black text-blue-500 hover:bg-blue-500/10 transition-all">
-            <Star size={20} fill={tier === 'pro' ? "currentColor" : "none"} /> {tier === 'pro' ? 'MANAGE PRO' : t('upgradeToPro')}
+            <Star size={20} fill={tier === 'pro' ? "currentColor" : "none"} /> {tier === 'pro' ? 'MANAGE PRO' : t('dashboard.upgradeToPro')}
           </button>
           <button onClick={() => navigate('/docs', { state: { from: 'dashboard' } })} className="w-full flex items-center gap-3 px-6 py-5 rounded-[24px] text-sm font-black text-slate-500 hover:bg-white/5 transition-all">
             <Zap size={20} /> {t('howItWorks')}
           </button>
-
-          <div className="px-2 pt-4">
-             <div className="h-[280px]">
-               <SpeedTestWidget />
-             </div>
-          </div>
         </nav>
 
         <div className="p-8">
@@ -315,35 +332,49 @@ const Dashboard: React.FC = () => {
       </aside>
 
       <main className="flex-1 overflow-y-auto relative scrollbar-hide w-full" dir={dir}>
-        <header className="sticky top-0 z-20 bg-slate-950/80 backdrop-blur-3xl border-b border-white/5 px-6 py-6 lg:px-12 lg:py-8 flex items-center justify-between">
+        <header className="sticky top-0 z-20 bg-slate-950/80 backdrop-blur-3xl border-b border-white/5 px-4 py-4 lg:px-12 lg:py-8 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden text-slate-400 hover:text-white transition-colors">
               <Menu size={24} />
             </button>
-            <h2 className="text-2xl lg:text-3xl font-black tracking-tighter">{t('neuralHub')}</h2>
+            <h2 className="text-xl lg:text-3xl font-black tracking-tighter">{t('neuralHub')}</h2>
           </div>
           <div className="flex items-center gap-2 lg:gap-4">
             <button 
               onClick={() => setVoiceEnabled(!voiceEnabled)}
-              className={`px-3 py-2 lg:px-4 lg:py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${voiceEnabled ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/20' : 'bg-slate-900 border-white/10 text-slate-500 hover:text-white'}`}
+              className={`px-2 py-2 lg:px-4 lg:py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${voiceEnabled ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/20' : 'bg-slate-900 border-white/10 text-slate-500 hover:text-white'}`}
             >
               <span className="hidden sm:inline">{t('voice')} </span>{voiceEnabled ? t('on') : t('off')}
             </button>
             <button 
               onClick={() => setIsADHDMode(!isADHDMode)}
-              className={`px-3 py-2 lg:px-4 lg:py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${isADHDMode ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-600/20' : 'bg-slate-900 border-white/10 text-slate-500 hover:text-white'}`}
+              className={`px-2 py-2 lg:px-4 lg:py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${isADHDMode ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-600/20' : 'bg-slate-900 border-white/10 text-slate-500 hover:text-white'}`}
             >
               <span className="hidden sm:inline">{t('adhdMode')} </span>{isADHDMode ? t('on') : t('off')}
             </button>
-            {tier === 'pro' && <div className="hidden xl:flex bg-amber-500/10 text-amber-500 px-4 py-2 rounded-xl text-[10px] font-black uppercase border border-amber-500/20 items-center gap-2"><Star size={12} fill="currentColor" /> {t('proEngineActive')}</div>}
+            {tier === 'pro' && <div className="hidden xl:flex bg-amber-500/10 text-amber-500 px-4 py-2 rounded-xl text-[10px] font-black uppercase border border-amber-500/20 items-center gap-2 animate-in fade-in duration-500"><Star size={12} fill="currentColor" /> {t('proEngineActive')}</div>}
             <div className="bg-slate-900 border border-white/5 rounded-2xl px-3 py-2 lg:px-6 lg:py-3 flex items-center gap-3">
-              <div className={`w-3 h-3 rounded-full ${isMonitoring ? 'bg-green-500 animate-pulse' : 'bg-slate-600'}`} />
+              <div className={`w-2 h-2 lg:w-3 lg:h-3 rounded-full ${isMonitoring ? 'bg-green-500 animate-pulse' : 'bg-slate-600'}`} />
               <span className="text-xs font-black uppercase tracking-widest hidden sm:inline">{isMonitoring ? t('flowSynchronized') : t('sensorsIdle')}</span>
             </div>
           </div>
         </header>
 
-        <div className="p-6 lg:p-12 max-w-[1400px] mx-auto space-y-8 lg:space-y-12">
+        <div className="p-4 lg:p-12 max-w-[1400px] mx-auto space-y-8 lg:space-y-12">
+          {loading ? (
+             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10">
+                 <div className="lg:col-span-12 h-[300px]">
+                     <SkeletonLoader className="w-full h-full rounded-[48px]" />
+                 </div>
+                 <div className="lg:col-span-4 h-[400px]">
+                     <SkeletonLoader className="w-full h-full rounded-[32px]" />
+                 </div>
+                 <div className="lg:col-span-8 h-[400px]">
+                      <SkeletonLoader className="w-full h-full rounded-[32px]" />
+                 </div>
+             </div>
+          ) : (
+             <>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10">
             <div className="lg:col-span-4 space-y-6">
             <div className="glass-card rounded-[32px] lg:rounded-[48px] p-6 lg:p-10 flex flex-col items-center justify-center text-center relative">
@@ -373,11 +404,11 @@ const Dashboard: React.FC = () => {
           </div>
 
           {tier === 'pro' && (
-            <div className="glass-card rounded-[48px] p-12 border border-blue-500/20 bg-gradient-to-br from-blue-600/5 to-transparent">
-              <div className="flex items-center justify-between mb-8">
+            <div className="glass-card rounded-[32px] lg:rounded-[48px] p-6 lg:p-12 border border-blue-500/20 bg-gradient-to-br from-blue-600/5 to-transparent">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
                 <div className="flex items-center gap-4">
                   <Video className="text-blue-500" />
-                  <h3 className="text-xl font-black uppercase tracking-tight">Neural Meditation Engine (Veo)</h3>
+                  <h3 className="text-lg lg:text-xl font-black uppercase tracking-tight">Neural Meditation Engine (Veo)</h3>
                 </div>
                 <button 
                   onClick={generateMeditation}
@@ -403,11 +434,11 @@ const Dashboard: React.FC = () => {
           )}
 
           {(forecast || blueprint) && (
-            <div className="grid lg:grid-cols-2 gap-10 animate-in slide-in-from-bottom-10 duration-700">
+            <div className="grid lg:grid-cols-2 gap-6 lg:gap-10 animate-in slide-in-from-bottom-10 duration-700">
               {forecast && (
-                <div className="glass-card rounded-[40px] p-10 border-l-4 border-l-blue-500 flex flex-col">
-                  <div className="flex items-center justify-between mb-8">
-                    <h3 className="text-xl font-black uppercase">Burnout Forecast</h3>
+                <div className="glass-card rounded-[32px] lg:rounded-[40px] p-6 lg:p-10 border-l-4 border-l-blue-500 flex flex-col">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
+                    <h3 className="text-lg lg:text-xl font-black uppercase">Burnout Forecast</h3>
                     <div className="px-4 py-2 rounded-xl text-[10px] font-black uppercase bg-blue-500/10 text-blue-400 border border-blue-500/30">
                       Risk: {forecast.riskScore}%
                     </div>
@@ -420,9 +451,9 @@ const Dashboard: React.FC = () => {
                 </div>
               )}
               {blueprint && (
-                <div className="glass-card rounded-[40px] p-10 border-l-4 border-l-indigo-500 flex flex-col">
-                  <h3 className="text-xl font-black uppercase mb-8">Bio-Blueprint</h3>
-                  <div className="grid grid-cols-2 gap-6">
+                <div className="glass-card rounded-[32px] lg:rounded-[40px] p-6 lg:p-10 border-l-4 border-l-indigo-500 flex flex-col">
+                  <h3 className="text-lg lg:text-xl font-black uppercase mb-8">Bio-Blueprint</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div>
                       <p className="text-[10px] font-black text-slate-500 uppercase mb-4">Prime Window</p>
                       <p className="text-sm font-black">{blueprint.productivityWindow}</p>
@@ -450,9 +481,12 @@ const Dashboard: React.FC = () => {
                
              <div className="grid lg:grid-cols-2 gap-6">
                 {tier === 'pro' ? (
-                   <FatigueLineGraph data={fatigueReadings} />
+                   <div className="space-y-6">
+                       <FatigueLineGraph data={fatigueReadings} />
+                       <PostureScoreChart events={events} />
+                   </div>
                 ) : (
-                   <div className="glass-card p-8 rounded-3xl border border-white/5 flex flex-col items-center justify-center text-center relative overflow-hidden bg-slate-900/40">
+                   <div className="glass-card p-6 lg:p-8 rounded-3xl border border-white/5 flex flex-col items-center justify-center text-center relative overflow-hidden bg-slate-900/40">
                       <div className="absolute inset-0 bg-blue-600/5 blur-xl"></div>
                       <Lock className="mb-4 text-blue-500" size={32} />
                       <h3 className="font-bold text-lg text-white mb-2">{t('fatigueAnalysis')}</h3>
@@ -460,20 +494,24 @@ const Dashboard: React.FC = () => {
                       <button onClick={() => navigate('/pricing')} className="px-6 py-2 bg-blue-600 rounded-xl text-[10px] font-black uppercase text-white hover:bg-blue-700 transition-colors">{t('unlockPro')}</button>
                    </div>
                 )}
-                <ActivityChart events={events} />
+                <div className="space-y-6">
+                   <ActivityChart events={events} />
+                   <CircadianRhythmChart hourlyFatigue={hourlyFatigue} />
+                </div>
              </div>
 
              <div className="grid lg:grid-cols-2 gap-6">
                  {tier === 'pro' ? (
                     <>
-                       <div className="lg:col-span-2">
+                       <div className="lg:col-span-2 grid grid-cols-1 lg:grid-cols-2 gap-6">
                           <StressHeatmap data={stressHeatmapData} />
+                          <BreakComplianceChart />
                        </div>
                        <WeeklyActivityChart data={weeklyActivity} />
                        <ProgressLineGraph data={progressData} />
                     </>
                  ) : (
-                    <div className="lg:col-span-2 glass-card p-12 rounded-3xl border border-white/5 flex flex-col items-center justify-center text-center relative overflow-hidden group hover:border-blue-500/20 transition-all bg-slate-900/40">
+                    <div className="lg:col-span-2 glass-card p-6 lg:p-12 rounded-3xl border border-white/5 flex flex-col items-center justify-center text-center relative overflow-hidden group hover:border-blue-500/20 transition-all bg-slate-900/40">
                         <div className="absolute inset-0 bg-gradient-to-r from-blue-600/0 via-blue-600/5 to-blue-600/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
                         <TrendingUp className="mb-6 text-slate-600 group-hover:text-blue-500 transition-colors" size={48} />
                         <h3 className="text-2xl font-black text-white mb-4">{t('advanceCareer')}</h3>
@@ -483,7 +521,9 @@ const Dashboard: React.FC = () => {
                  )}
              </div>
           </div>
-        </div>
+        </>
+       )}
+      </div>
 
         {/* Footer Section */}
         <footer className="mt-20 border-t border-white/5 bg-slate-900/50 backdrop-blur-sm p-6 lg:p-12">

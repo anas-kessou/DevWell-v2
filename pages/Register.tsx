@@ -78,19 +78,19 @@ const Register: React.FC<Props> = ({ onRegister }) => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-slate-950" dir={dir}>
-      <Link to="/" className="absolute top-8 left-8 text-slate-500 hover:text-white transition-colors flex items-center gap-2 text-sm font-bold uppercase tracking-widest">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 lg:p-8 bg-slate-950" dir={dir}>
+      <Link to="/" className="absolute top-4 left-4 lg:top-8 lg:left-8 text-slate-500 hover:text-white transition-colors flex items-center gap-2 text-sm font-bold uppercase tracking-widest">
          <ArrowLeft size={16} /> Home
       </Link>
       <div className="w-full max-w-md">
-        <div className="flex items-center gap-3 font-bold text-3xl text-white mb-12 justify-center">
+        <div className="flex items-center gap-3 font-bold text-3xl text-white mb-8 lg:mb-12 justify-center">
           <div className="bg-blue-600 p-2 rounded-xl">
             <Activity size={28} />
           </div>
           <span>DevWell</span>
         </div>
 
-        <div className="bg-white rounded-[32px] p-10 shadow-2xl">
+        <div className="bg-white rounded-[24px] lg:rounded-[32px] p-6 lg:p-10 shadow-2xl">
           <h2 className="text-2xl font-bold text-slate-900 mb-2">{t('joinDevWell')}</h2>
           <p className="text-slate-500 text-sm mb-8">{t('startJourney')}</p>
 

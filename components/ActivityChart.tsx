@@ -16,40 +16,43 @@ const ActivityChart: React.FC<Props> = ({ events = [] }) => {
     // Given it's "Balance", 100 is "Balanced".
     
     // Map events to reductions
-    const initial = {
-      Focus: 100,
-      Posture: 100,
-      Energy: 100,
-      Health: 100,
-      Hydration: 100,
-      Breaks: 100
+    const stats: Record<string, number> = {
+      focus: 100,
+      posture: 100,
+      energy: 100,
+      health: 100,
+      hydration: 100,
+      breaks: 100
     };
 
     if (events.length > 0) {
       events.forEach(e => {
         const impact = e.severity === Severity.HIGH ? 20 : e.severity === Severity.MEDIUM ? 10 : 5;
         
-        if (e.type === EventType.FOCUS) initial.Focus = Math.max(0, initial.Focus - impact);
-        if (e.type === EventType.POSTURE) initial.Posture = Math.max(0, initial.Posture - impact);
+        if (e.type === EventType.FOCUS) stats.focus = Math.max(0, stats.focus - impact);
+        if (e.type === EventType.POSTURE) stats.posture = Math.max(0, stats.posture - impact);
         if (e.type === EventType.FATIGUE) {
-          initial.Energy = Math.max(0, initial.Energy - impact);
-          initial.Breaks = Math.max(0, initial.Breaks - impact);
+          stats.energy = Math.max(0, stats.energy - impact);
+          stats.breaks = Math.max(0, stats.breaks - impact);
         }
         if (e.type === EventType.STRESS) {
-           initial.Health = Math.max(0, initial.Health - impact);
-           initial.Focus = Math.max(0, initial.Focus - (impact/2));
+           stats.health = Math.max(0, stats.health - impact);
+           stats.focus = Math.max(0, stats.focus - (impact/2));
         }
       });
     }
 
-    const chartData = Object.keys(initial).map(key => ({
-      subject: key,
-      A: initial[key as keyof typeof initial],
-      fullMark: 150
-    }));
+    const chartData = [
+      { subject: t('components.activityChart.labels.focus'), A: stats.focus, fullMark: 150 },
+      { subject: t('components.activityChart.labels.posture'), A: stats.posture, fullMark: 150 },
+      { subject: t('components.activityChart.labels.energy'), A: stats.energy, fullMark: 150 },
+      { subject: t('components.activityChart.labels.health'), A: stats.health, fullMark: 150 },
+      { subject: t('components.activityChart.labels.hydration'), A: stats.hydration, fullMark: 150 },
+      { subject: t('components.activityChart.labels.breaks'), A: stats.breaks, fullMark: 150 }
+    ];
 
     // Calculate aggregated score
-    const total = Object.values(initial).reduce((a, b) => a + b, 0);
+    const total = Object.values(stats).reduce((a, b) => a + b, 0);
     const avg = Math.round(total / 6);
 
     return { data: chartData, score: avg };

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   ShieldCheck, Users, Activity, MessageCircle, Zap, TrendingUp, AlertTriangle, 
   Terminal, BarChart3, ChevronLeft, Globe, Database, BrainCircuit, RefreshCcw,
-  Lock, EyeOff, Download, ShieldAlert, CheckCircle, Info, Filter, Brain, Key, FileText, Wifi
+  Lock, EyeOff, Download, ShieldAlert, CheckCircle, Info, Filter, Brain, Key, FileText, Wifi, Menu, X
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
@@ -41,6 +41,7 @@ const AdminAnalytics: React.FC = () => {
   const [ticketDistribution, setTicketDistribution] = useState<any[]>([]);
   const [aiReport, setAiReport] = useState<any>(null);
   const [generatingReport, setGeneratingReport] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Mobile sidebar toggle
 
   const [realExStats, setRealStats] = useState({
     totalUsers: 0,
@@ -52,6 +53,8 @@ const AdminAnalytics: React.FC = () => {
   const [trendData, setTrendData] = useState<any[]>([]);
   const [recentEvents, setRecentEvents] = useState<any[]>([]);
   const [recentFeedback, setRecentFeedback] = useState<string[]>([]);
+  const [eventTypeDist, setEventTypeDist] = useState<any[]>([]); // New State for Event Type Distribution
+  const [retentionData, setRetentionData] = useState<any[]>([]); // New State for Retention Funnel
 
   const globalData = {
     ...realExStats,
@@ -59,17 +62,28 @@ const AdminAnalytics: React.FC = () => {
     recentFeedback: recentFeedback.length > 0 ? recentFeedback : ["No recent feedback fetched."]
   };
 
-  const handleAdminLogin = (e: React.FormEvent) => {
+  const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (passwordInput === 'vji4ayanas7cf8') {
-      setIsAdminAuth(true);
-      fetchRealData();
-    } else {
-      setAuthError('Access Denied: Invalid Security Token');
-      setPasswordInput('');
+    try {
+      setLoading(true);
+      const isValid = await FirebaseService.verifyAdminPassword(passwordInput);
+      if (isValid) {
+        setIsAdminAuth(true);
+        fetchRealData();
+      } else {
+        setAuthError('Access Denied: Invalid Security Token');
+        setPasswordInput('');
+      }
+    } catch (e) {
+      setAuthError('Error verifying credentials');
+      console.error(e);
+    } finally {
+      setLoading(false);
     }
   };
-
+  
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+  
   const fetchRealData = async () => {
     setLoading(true);
     
@@ -109,6 +123,24 @@ const AdminAnalytics: React.FC = () => {
 
     // 3. Process Events for Charts
     processTrends(events);
+
+    // 4. Calculate Event Type Distribution (New)
+    const typeCount: any = {};
+    events.forEach(e => {
+        const type = e.type || 'UNKNOWN';
+        typeCount[type] = (typeCount?.[type] || 0) + 1;
+    });
+    setEventTypeDist(Object.entries(typeCount).map(([name, value]) => ({ name, value })));
+
+    // 5. Mock Retention Funnel (New)
+    // In real app, this would be computed from user cohorts
+    setRetentionData([
+        { stage: 'Registered', count: stats.totalUsers },
+        { stage: 'Activated', count: Math.floor(stats.totalUsers * 0.8) },
+        { stage: 'First Sync', count: Math.floor(stats.totalUsers * 0.5) },
+        { stage: 'Retained 7d', count: Math.floor(stats.totalUsers * 0.3) },
+        { stage: 'Pro User', count: Math.floor(stats.totalUsers * 0.1) },
+    ]);
 
     setLoading(false); 
     
@@ -309,25 +341,28 @@ const AdminAnalytics: React.FC = () => {
   return (
     <div className="min-h-screen bg-black text-slate-100 font-mono scrollbar-hide" dir={dir}>
       {/* Header */}
-      <header className="border-b border-cyan-900/30 bg-black/80 backdrop-blur-xl sticky top-0 z-50 px-10 py-6 flex items-center justify-between">
-        <div className="flex items-center gap-6">
-          <Link to="/dashboard" className="p-2 hover:bg-white/5 rounded-xl transition-colors">
+      <header className="border-b border-cyan-900/30 bg-black/80 backdrop-blur-xl sticky top-0 z-50 px-6 md:px-10 py-4 md:py-6 flex items-center justify-between">
+        <div className="flex items-center gap-4 md:gap-6">
+          <Link to="/dashboard" className="p-2 hover:bg-white/5 rounded-xl transition-colors hidden md:block">
             <ChevronLeft size={20} className={`text-slate-500 ${dir === 'rtl' ? 'rotate-180' : ''}`} />
           </Link>
+          <button onClick={toggleSidebar} className="p-2 hover:bg-white/5 rounded-xl transition-colors lg:hidden text-slate-400">
+            <Menu size={24} />
+          </button>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-cyan-600/20 rounded-lg flex items-center justify-center border border-cyan-500/30">
-              <ShieldCheck size={24} className="text-cyan-500" />
+            <div className="w-8 h-8 md:w-10 md:h-10 bg-cyan-600/20 rounded-lg flex items-center justify-center border border-cyan-500/30">
+              <ShieldCheck size={20} className="text-cyan-500 md:w-6 md:h-6" />
             </div>
             <div>
-              <h1 className="text-lg font-black tracking-widest text-white uppercase">{t('admin.title')}</h1>
-              <p className="text-[10px] text-cyan-500/60 font-bold uppercase tracking-widest">Platform Root v2.1.0 // Privacy Guard: {noiseEnabled ? 'ACTIVE' : 'OFF'}</p>
+              <h1 className="text-sm md:text-lg font-black tracking-widest text-white uppercase">{t('admin.title')}</h1>
+              <p className="hidden md:block text-[10px] text-cyan-500/60 font-bold uppercase tracking-widest">Platform Root v2.1.0 // Privacy Guard: {noiseEnabled ? 'ACTIVE' : 'OFF'}</p>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4 md:gap-6">
           <div className="flex items-center gap-2 bg-slate-900 px-3 py-1.5 rounded-lg border border-white/5">
-            <span className="text-[9px] font-black uppercase text-slate-500">{t('admin.noiseInjection')}</span>
+            <span className="text-[9px] font-black uppercase text-slate-500 hidden sm:inline">{t('admin.noiseInjection')}</span>
             <button 
               onClick={() => setNoiseEnabled(!noiseEnabled)}
               className={`w-10 h-5 rounded-full relative transition-all ${noiseEnabled ? 'bg-cyan-500' : 'bg-slate-700'}`}
@@ -337,14 +372,24 @@ const AdminAnalytics: React.FC = () => {
           </div>
           <div className="flex items-center gap-3 bg-cyan-500/5 px-4 py-2 rounded-xl border border-cyan-500/20">
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.5)]" />
-            <span className="text-[10px] font-black text-cyan-400">{t('admin.encryptedUplink')}</span>
+            <span className="text-[10px] font-black text-cyan-400 hidden sm:inline">{t('admin.encryptedUplink')}</span>
           </div>
         </div>
       </header>
 
-      <div className="p-10 max-w-[1600px] mx-auto grid lg:grid-cols-12 gap-8">
+      <div className="p-4 md:p-10 max-w-[1600px] mx-auto grid lg:grid-cols-12 gap-8 relative">
         {/* Navigation Sidebar */}
-        <aside className="lg:col-span-3 space-y-4">
+        <div className={`fixed inset-0 z-40 bg-black/90 backdrop-blur-xl lg:hidden transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={toggleSidebar} />
+        
+        <aside className={`
+            fixed lg:static inset-y-0 left-0 z-50 w-72 lg:w-auto bg-black lg:bg-transparent p-6 lg:p-0 border-r lg:border-r-0 border-white/10 transition-transform duration-300 lg:translate-x-0 lg:col-span-3 space-y-4
+            ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        `}>
+          <div className="flex items-center justify-between lg:hidden mb-8">
+             <span className="text-sm font-black uppercase tracking-widest text-slate-400">Menu</span>
+             <button onClick={toggleSidebar}><X className="text-slate-500" /></button>
+          </div>
+
           {[
             { id: 'metrics', label: t('admin.metrics'), icon: <Activity size={18} /> },
             { id: 'analytics', label: t('admin.analytics'), icon: <BarChart3 size={18} /> },
@@ -400,25 +445,25 @@ const AdminAnalytics: React.FC = () => {
           {activeTab === 'metrics' && (
             <div className="animate-in slide-in-from-right-10 duration-500 space-y-8">
               {/* KPI Matrix */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                 {[
                   { label: t('admin.totalUsers'), value: globalData.totalUsers, icon: <Users className="text-cyan-400" />, trend: t('admin.live') },
                   { label: t('admin.healthEvents'), value: globalData.totalEvents, icon: <Activity className="text-magenta-400" />, trend: t('admin.aggregated') },
                   { label: t('admin.supportTickets'), value: globalData.totalTickets, icon: <ShieldAlert className="text-yellow-400" />, trend: t('admin.pending') },
                   { label: t('admin.totalFeedback'), value: globalData.totalFeedback, icon: <MessageCircle className="text-green-400" />, trend: t('admin.received') }
                 ].map((kpi, i) => (
-                  <div key={i} className="bg-slate-900/30 p-8 rounded-[32px] border border-white/5 relative overflow-hidden group">
+                  <div key={i} className="bg-slate-900/30 p-6 md:p-8 rounded-[32px] border border-white/5 relative overflow-hidden group hover:border-white/10 transition-all">
                     <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:opacity-40 transition-opacity">{kpi.icon}</div>
                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">{kpi.label}</p>
-                    <h3 className="text-4xl font-black mb-2">{kpi.value}</h3>
+                    <h3 className="text-3xl md:text-4xl font-black mb-2">{kpi.value}</h3>
                     <p className="text-[10px] font-bold text-cyan-600">{kpi.trend}</p>
                   </div>
                 ))}
               </div>
 
               {/* Weekly Trend Overlay Chart */}
-              <div className="bg-slate-900/30 p-10 rounded-[40px] border border-white/5">
-                <div className="flex items-center justify-between mb-12">
+              <div className="bg-slate-900/30 p-6 md:p-10 rounded-[40px] border border-white/5">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 md:mb-12 gap-4">
                    <div>
                       <h3 className="text-lg font-black uppercase tracking-tighter">{t('admin.aggregatedTrend')}</h3>
                       <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{t('admin.oscillation')}</p>
@@ -434,7 +479,7 @@ const AdminAnalytics: React.FC = () => {
                       </div>
                    </div>
                 </div>
-                <div className="h-[400px] w-full">
+                <div className="h-[300px] md:h-[400px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={trendData}>
                       <defs>
@@ -526,19 +571,7 @@ const AdminAnalytics: React.FC = () => {
                      <div className="relative w-40 h-40 my-4 flex items-center justify-center">
                          <div className="text-4xl font-black text-cyan-400">{feedbackStats.avgRating}</div>
                      </div>
-                     <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">{feedbackStats.totalRaters} {t('admin.reviewers')}</p>                     <div className="w-full mt-6 space-y-2">
-                        {[5,4,3,2,1].map(r => (
-                           <div key={r} className="flex items-center gap-2 text-[10px]">
-                              <span className="w-4">{r}★</span>
-                              <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
-                                 <div 
-                                    className="h-full bg-cyan-500" 
-                                    style={{width: `${(feedbackStats.distribution[r] / feedbackStats.totalRaters * 100) || 0}%`}} 
-                                 />
-                              </div>
-                           </div>
-                        ))}
-                     </div>
+                     <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">{feedbackStats.totalRaters} {t('admin.reviewers')}</p>
                   </div>
                </div>
 

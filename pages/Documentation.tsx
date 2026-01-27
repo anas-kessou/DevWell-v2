@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Activity, Camera, MessageSquare, BarChart3, Zap, Shield, ArrowLeft, Brain, Video, Eye, Mic } from 'lucide-react';
+import { Activity, Camera, MessageSquare, BarChart3, Zap, Shield, ArrowLeft, Brain, Video, Eye, Mic, Smartphone, Lock, RefreshCw } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 const Documentation: React.FC = () => {
@@ -179,6 +179,70 @@ const Documentation: React.FC = () => {
                     {t('docsContent.proTools.forecast.desc')}
                   </p>
                </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-8">
+               <div className="space-y-4">
+                  <h3 className="text-xl font-black flex items-center gap-2"><Activity size={20} className="text-emerald-500" /> Advanced Analytics</h3>
+                  <p className="text-sm text-slate-400 leading-relaxed">
+                    DevWell now includes comprehensive biometrics visualization:
+                    <ul className="list-disc ml-5 mt-2 space-y-1">
+                        <li><strong>Posture Score:</strong> Real-time spine alignment tracking.</li>
+                        <li><strong>Circadian Rhythm:</strong> Energy level estimation based on fatigue history.</li>
+                        <li><strong>Cortisol Heatmap:</strong> 7-day stress pattern analysis.</li>
+                    </ul>
+                  </p>
+               </div>
+            </div>
+
+          </div>
+        </section>
+
+        {/* 5. Mobile & Security */}
+        <section className="grid md:grid-cols-[200px_1fr] gap-10 border-t border-white/5 pt-10 pb-20">
+          <div className="text-blue-400 font-black uppercase tracking-widest text-sm sticky top-24 self-start">
+            Ecosystem & Security
+          </div>
+          <div className="space-y-12">
+            
+            <div className="space-y-4">
+               <div className="flex items-center gap-3 text-2xl font-black">
+                  <div className="bg-slate-800 p-3 rounded-2xl text-white"><Smartphone size={24} /></div>
+                  <h3>Mobile Probe Integration</h3>
+               </div>
+               <p className="text-slate-400 leading-relaxed">
+                  The DevWell Mobile Probe allows you to use your smartphone as a dedicated vocal and visual sensor.
+               </p>
+               <div className="bg-slate-900 border border-white/5 p-6 rounded-3xl space-y-4">
+                   <h4 className="font-bold text-white uppercase text-xs tracking-widest">How to Connect</h4>
+                   <ol className="list-decimal ml-5 text-sm text-slate-400 space-y-2">
+                       <li>Open the DevWell Dashboard on your desktop.</li>
+                       <li>Click "Link Mobile" in the Camera Monitor widget.</li>
+                       <li>Open the mobile app (or visit <code>/probe</code>) on your phone.</li>
+                       <li>Scan the QR code or enter the session ID manually.</li>
+                       <li><strong>Mutual Exclusion:</strong> If you activate the mobile camera, the web camera will automatically pause to save resources.</li>
+                   </ol>
+               </div>
+            </div>
+
+            <div className="space-y-4">
+               <div className="flex items-center gap-3 text-2xl font-black">
+                  <div className="bg-green-500/10 p-3 rounded-2xl text-green-500"><Lock size={24} /></div>
+                  <h3>End-to-End Encryption</h3>
+               </div>
+               <p className="text-slate-400 leading-relaxed">
+                  Your privacy is paramount. DevWell employs military-grade <strong>AES-256 GCM</strong> encryption for all sensitive health data.
+               </p>
+               <ul className="grid sm:grid-cols-2 gap-4">
+                <li className="flex items-center gap-2 text-sm font-bold text-slate-300 bg-white/5 p-3 rounded-lg border border-white/5">
+                    <Shield size={16} className="text-green-500" />
+                    Data Encrypted at Rest
+                </li>
+                <li className="flex items-center gap-2 text-sm font-bold text-slate-300 bg-white/5 p-3 rounded-lg border border-white/5">
+                    <RefreshCw size={16} className="text-blue-500" />
+                    Encrypted Real-time Streams
+                </li>
+               </ul>
             </div>
 
           </div>

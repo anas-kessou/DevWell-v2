@@ -58,7 +58,7 @@ const SensorMode: React.FC = () => {
                 const dataUrl = canvasRef.current.toDataURL('image/jpeg', 0.5);
                 
                 // Upload to Firestore
-                await FirebaseService.updateSessionData(sessionId, dataUrl);
+                await FirebaseService.updateSessionData(sessionId, dataUrl, null);
             }
         }
      }, 1000); // 1 FPS update rate to save bandwidth/writes

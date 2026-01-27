@@ -233,9 +233,9 @@ const ChatbotWidget: React.FC<Props> = ({ isADHDMode = false, healthEvents = [],
   };
 
   return (
-    <div className="fixed bottom-10 right-10 z-50">
+    <div className="fixed bottom-4 right-4 lg:bottom-10 lg:right-10 z-50">
       {isOpen ? (
-        <div className="bg-slate-900 w-[440px] h-[680px] rounded-[40px] shadow-2xl border border-white/10 flex flex-col overflow-hidden animate-in slide-in-from-bottom-10 duration-500">
+        <div className="bg-slate-900 w-[calc(100vw-32px)] sm:w-[440px] h-[calc(100vh-100px)] sm:h-[680px] rounded-[32px] sm:rounded-[40px] shadow-2xl border border-white/10 flex flex-col overflow-hidden animate-in slide-in-from-bottom-10 duration-500">
           <div className="p-6 bg-gradient-to-r from-blue-600 to-blue-800 text-white flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-md">
