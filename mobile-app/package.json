@@ -1,28 +1,38 @@
 {
-  "name": "devwell-remote-probe",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "homepage": "https://anas-kessou.github.io/DevWell-v2/probe",
+  "name": "mobile-app",
+  "version": "1.0.0",
+  "main": "index.ts",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web"
   },
   "dependencies": {
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "@types/node-forge": "^1.3.14",
+    "expo": "~54.0.32",
+    "expo-barcode-scanner": "^13.0.1",
+    "expo-camera": "~17.0.10",
+    "expo-constants": "~18.0.13",
+    "expo-crypto": "~15.0.8",
+    "expo-linking": "~8.0.11",
+    "expo-status-bar": "~3.0.9",
     "firebase": "^12.8.0",
-    "html5-qrcode": "^2.3.8",
-    "lucide-react": "^0.562.0",
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3"
+    "lucide-react-native": "^0.563.0",
+    "nativewind": "^4.2.1",
+    "node-forge": "^1.3.3",
+    "react": "19.1.0",
+    "react-native": "0.81.5",
+    "react-native-reanimated": "~4.1.1",
+    "react-native-safe-area-context": "^5.6.2",
+    "react-native-screens": "~4.16.0",
+    "tailwindcss": "^3.3.2"
   },
   "devDependencies": {
-    "@types/node": "^22.19.7",
-    "@vitejs/plugin-react": "^5.0.0",
-    "gh-pages": "^6.3.0",
-    "typescript": "~5.8.2",
-    "vite": "^6.2.0"
-  }
+    "@types/react": "~19.1.0",
+    "@types/react-native": "^0.73.0",
+    "typescript": "~5.9.2"
+  },
+  "private": true
 }

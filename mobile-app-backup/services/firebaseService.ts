@@ -55,34 +55,24 @@ class FirebaseService {
                 image: encryptedFrame,
                 timestamp: Date.now(),
                 isEncrypted: true,
-                ...metadata 
+                ...metadata // metadata (vocalTension) kept plain for performance/analytics or encrypt if needed
             },
-            activeSource: 'mobile' 
+            activeSource: 'mobile' // Implicitly set source to mobile when streaming
         });
     } catch (e) {
         console.error("Stream Error", e);
     }
   }
 
-  async setSessionActiveSource(sessionId: string, source: 'web' | 'mobile' | null): Promise<void> {
-        const sessionRef = doc(db, "remote_sessions", sessionId);
-        await updateDoc(sessionRef, { activeSource: source });
+  async setActiveSource(sessionId: string, source: 'web' | 'mobile' | null): Promise<void> {
+       const sessionRef = doc(db, "remote_sessions", sessionId);
+       await updateDoc(sessionRef, { activeSource: source });
   }
 
-  async setSessionActiveState(sessionId: string, active: boolean) {
-        const sessionRef = doc(db, "remote_sessions", sessionId);
-        await updateDoc(sessionRef, { sessionActive: active });
-  }
-
-  onSessionStateChange(sessionId: string, callback: (state: { activeSource: 'web' | 'mobile' | null, sessionActive: boolean }) => void) {
-      const sessionRef = doc(db, "remote_sessions", sessionId);
-      return onSnapshot(sessionRef, (snapshot) => {
+  onSessionSourceChange(sessionId: string, callback: (source: 'web' | 'mobile' | null) => void): () => void {
+      return onSnapshot(doc(db, "remote_sessions", sessionId), (snapshot) => {
           if (snapshot.exists()) {
-              const data = snapshot.data();
-              callback({
-                  activeSource: data.activeSource,
-                  sessionActive: data.sessionActive || false
-              });
+              callback(snapshot.data().activeSource || null);
           }
       });
   }
@@ -92,8 +82,6 @@ class FirebaseService {
         const sessionRef = doc(db, "remote_sessions", sessionId);
         await updateDoc(sessionRef, {
             isActive: false,
-            sessionActive: false,
-            activeSource: null,
             data: null
         });
     } catch(e) {

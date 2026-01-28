@@ -1,88 +1,72 @@
-
-// Simple AES-GCM encryption using Web Crypto API
-// In a real production app, keys should be managed via KMS or standard key rotation policies.
-// For this app, we derive a key from a static secret mixed with the user ID for separation, 
-// or a global key for admin accessibility.
+import forge from 'node-forge';
 
 const APP_SECRET = "DEVWELL_NEURAL_LINK_V2_SECURE_KEY_2026";
+const SALT = "devwell-salt";
 
-async function getKey(): Promise<CryptoKey> {
-    const encoder = new TextEncoder();
-    const keyMaterial = await window.crypto.subtle.importKey(
-        "raw",
-        encoder.encode(APP_SECRET),
-        { name: "PBKDF2" },
-        false,
-        ["deriveKey"]
-    );
+let cachedKey: string | null = null;
 
-    return window.crypto.subtle.deriveKey(
-        {
-            name: "PBKDF2",
-            salt: encoder.encode("devwell-salt"),
-            iterations: 100000,
-            hash: "SHA-256"
-        },
-        keyMaterial,
-        { name: "AES-GCM", length: 256 },
-        false,
-        ["encrypt", "decrypt"]
-    );
+// PBKDF2 key derivation using node-forge (Memoized)
+function getDerivedKey() {
+    if (cachedKey) return cachedKey;
+    cachedKey = forge.pkcs5.pbkdf2(APP_SECRET, SALT, 100000, 32); // 32 bytes for AES-256
+    return cachedKey;
 }
 
 export const encryptData = async (data: any): Promise<string> => {
     try {
-        const key = await getKey();
-        const encoder = new TextEncoder();
-        const iv = window.crypto.getRandomValues(new Uint8Array(12));
-        const encodedData = encoder.encode(JSON.stringify(data));
-
-        const encrypted = await window.crypto.subtle.encrypt(
-            { name: "AES-GCM", iv },
-            key,
-            encodedData
-        );
-
-        // Combine IV and encrypted data into a single string
-        const ivArray = Array.from(iv);
-        const encryptedArray = Array.from(new Uint8Array(encrypted));
-        const combined = new Uint8Array(ivArray.length + encryptedArray.length);
-        combined.set(ivArray);
-        combined.set(encryptedArray, ivArray.length);
-
+        const key = getDerivedKey();
+        const iv = forge.random.getBytesSync(12);
+        const cipher = forge.cipher.createCipher('AES-GCM', key);
+        
+        const payload = JSON.stringify(data);
+        cipher.start({
+            iv: iv,
+            tagLength: 128 // 16 bytes
+        });
+        cipher.update(forge.util.createBuffer(forge.util.encodeUtf8(payload)));
+        cipher.finish();
+        
+        const encrypted = cipher.output.getBytes();
+        const tag = cipher.mode.tag.getBytes();
+        
+        // Combine IV + Encrypted Data + Tag
+        const combined = iv + encrypted + tag;
+        
         // Convert to Base64
-        return btoa(String.fromCharCode(...combined));
+        return forge.util.encode64(combined);
     } catch (e) {
         console.error("Encryption failed", e);
         return "";
     }
 };
 
-export const decryptData = async (encryptedString: string): Promise<any> => {
+export const decryptData = async (encryptedBase64: string): Promise<any> => {
     try {
-        if (!encryptedString) return null;
+        if (!encryptedBase64) return null;
         
-        const key = await getKey();
-        const binaryString = atob(encryptedString);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
+        const combined = forge.util.decode64(encryptedBase64);
+        
+        // Extract components
+        const iv = combined.slice(0, 12);
+        const tag = combined.slice(combined.length - 16);
+        const encrypted = combined.slice(12, combined.length - 16);
+        
+        const key = getDerivedKey();
+        const decipher = forge.cipher.createDecipher('AES-GCM', key);
+        
+        decipher.start({
+            iv: iv,
+            tag: forge.util.createBuffer(tag)
+        });
+        decipher.update(forge.util.createBuffer(encrypted));
+        
+        const pass = decipher.finish();
+        if (pass) {
+            return JSON.parse(forge.util.decodeUtf8(decipher.output.getBytes()));
         }
-
-        const iv = bytes.slice(0, 12);
-        const data = bytes.slice(12);
-
-        const decrypted = await window.crypto.subtle.decrypt(
-            { name: "AES-GCM", iv },
-            key,
-            data
-        );
-
-        const decoder = new TextDecoder();
-        return JSON.parse(decoder.decode(decrypted));
+        throw new Error("Decryption failed at authentication check");
     } catch (e) {
         // Fallback for non-encrypted legacy data
-        // console.warn("Decryption failed or data legacy", e);
-        return encryptedString; // Return original if fallback needed, though JSON parse might fail if it's not JSON
+        return encryptedBase64;
     }
 };

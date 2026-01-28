@@ -604,13 +604,7 @@ class FirebaseServiceImpl {
         // Wait, saveSupportTicket in previous read_file (Line 389) used "system_metadata", "tickets", "items"
         
         // Let's correct this in a moment. I will assume the user meant "support_tickets" or "tickets".
-        // I'll stick to what I see in `saveSupportTicket` below.
-        
-        // Re-reading code... Line 389: collection(db, "system_metadata", "tickets", "items");
-        
-        // But previously I saw code using "support_tickets" in getTicketDistribution?? No I implemented it just now.
-        // Let's use "support_tickets" for collection name if that's what other parts use, or "tickets"
-        // I will trust my read of saveSupportTicket -> "tickets".
+        // I'll trust my read of saveSupportTicket -> "tickets".
         
         // Actually, let's use a broader query or catch errors.
         const q = query(collection(db, "system_metadata", "support_tickets")); // Wait, let's check carefully.
@@ -665,8 +659,9 @@ class FirebaseServiceImpl {
         const docRef = await addDoc(collection(db, "remote_sessions"), {
             hostId,
             createdAt: serverTimestamp(),
-            isActive: true,
-            activeSource: null,
+            isActive: true, // Session is allocated
+            sessionActive: false, // Is the "Meeting" actually running?
+            activeSource: null,   // Who is sending data
             data: null
         });
         return docRef.id;
@@ -674,6 +669,11 @@ class FirebaseServiceImpl {
         console.error("Error creating sync session:", e);
         throw e;
     }
+  }
+
+  async setSessionActiveState(sessionId: string, active: boolean) {
+      const docRef = doc(db, "remote_sessions", sessionId);
+      await updateDoc(docRef, { sessionActive: active });
   }
 
   async setSessionActiveSource(sessionId: string, source: 'web' | 'mobile' | null) {
@@ -704,17 +704,28 @@ class FirebaseServiceImpl {
 
   onSessionDataChange(sessionId: string, callback: (data: any) => void) {
       const docRef = doc(db, "remote_sessions", sessionId);
-      return onSnapshot(docRef, (doc) => {
+      return onSnapshot(docRef, async (doc) => {
           if (doc.exists()) {
              const data = doc.data();
+             let sessionData = data.data || {};
+
+             if (sessionData.isEncrypted && sessionData.image) {
+                const decryptedImage = await decryptData(sessionData.image);
+                if (decryptedImage) {
+                    sessionData = { ...sessionData, image: decryptedImage };
+                }
+             }
+
              // Merge flat for the UI consumption
              callback({
                  activeSource: data.activeSource,
-                 ...(data.data || {})
+                 sessionActive: data.sessionActive,
+                 ...sessionData
              });
           }
       });
   }
+
 }
 
 export const FirebaseService = new FirebaseServiceImpl();

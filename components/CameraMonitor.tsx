@@ -20,6 +20,7 @@ const CameraMonitor = forwardRef<CameraMonitorHandle, Props>(({ onEventDetected,
   const [remoteSessionId, setRemoteSessionId] = useState<string | null>(null);
   const [remoteImage, setRemoteImage] = useState<string | null>(null);
   const [activeSource, setActiveSource] = useState<'web' | 'mobile' | null>(null);
+  const [sessionActive, setSessionActive] = useState<boolean>(false);
   
   useImperativeHandle(ref, () => ({
     getSnapshot: () => {
@@ -70,6 +71,7 @@ const CameraMonitor = forwardRef<CameraMonitorHandle, Props>(({ onEventDetected,
             // Handle Status / Active Source
             const source = data.activeSource;
             setActiveSource(source);
+            setSessionActive(data.sessionActive);
 
             if (source === 'mobile') {
                 // Mobile took control -> Stop Local
@@ -79,13 +81,16 @@ const CameraMonitor = forwardRef<CameraMonitorHandle, Props>(({ onEventDetected,
                     videoRef.current.srcObject = null;
                 }
                 setIsMonitoring(true); // "Monitoring" but via remote
-            } else if (source === 'web') {
-                // Web took control -> If we aren't running local, start local? 
-                // Or just allow user to start local manually.
-                // If we receive 'web' that means WE presumably set it, or another tab.
-                // If it's us, we are already running.
+            } else if (source === 'web' && data.sessionActive) {
+                // Web took control -> If we aren't running local, start local
+                 if (!videoRef.current?.srcObject) {
+                     startMonitoring(); 
+                 }
             } else {
-                // Idle
+                // Idle or Session Inactive
+                if (!data.sessionActive && isMonitoring) {
+                   stopMonitoring();
+                }
             }
 
             // Handle Image Data
@@ -159,19 +164,24 @@ const CameraMonitor = forwardRef<CameraMonitorHandle, Props>(({ onEventDetected,
 
     // 3. Speak Response
     setLastSpokenTime(Date.now()); // Prevent listening to self
-    await GeminiService.speak(response);
-    setLastSpokenTime(Date.now()); // Update again after speaking finishes
+    GeminiService.speak(response);
+  };
+
+  const handleSwitchSource = async (target: 'web' | 'mobile') => {
+      if (!remoteSessionId) return;
+      // 1. Set the session active if not already
+      if (!sessionActive) {
+          await FirebaseService.setSessionActiveState(remoteSessionId, true);
+      }
+      // 2. Set the active source
+      await FirebaseService.setSessionActiveSource(remoteSessionId, target);
   };
 
   const startMonitoring = async () => {
     // Determine exclusion
-    if (remoteSessionId && activeSource === 'mobile') {
-        const confirmSwitch = window.confirm("Mobile camera is active. Switch to Local Camera?");
-        if (!confirmSwitch) return;
-        // Signal Mobile to Stop
-        await FirebaseService.setSessionActiveSource(remoteSessionId, 'web');
-    } else if (remoteSessionId) {
-        await FirebaseService.setSessionActiveSource(remoteSessionId, 'web');
+    if (remoteSessionId) {
+         // If starting local, we become the active source
+         await handleSwitchSource('web');
     }
 
     try {
@@ -207,9 +217,12 @@ const CameraMonitor = forwardRef<CameraMonitorHandle, Props>(({ onEventDetected,
     }
   };
 
-  const stopMonitoring = () => {
+  const stopMonitoring = async () => {
     if (videoRef.current?.srcObject) {
-      (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
+      // Check if srcObject is a MediaStream before calling getTracks
+      if (videoRef.current.srcObject instanceof MediaStream) {
+        videoRef.current.srcObject.getTracks().forEach(t => t.stop());
+      }
       videoRef.current.srcObject = null;
     }
     audioContextRef.current?.close();
@@ -217,10 +230,9 @@ const CameraMonitor = forwardRef<CameraMonitorHandle, Props>(({ onEventDetected,
     setIsMonitoring(false);
     
     if (remoteSessionId) {
-        // If we were the active source, set to null (Idle)
-        if (activeSource === 'web') {
-            FirebaseService.setSessionActiveSource(remoteSessionId, null);
-        }
+        // Stop the session entirely
+        await FirebaseService.setSessionActiveState(remoteSessionId, false);
+        await FirebaseService.setSessionActiveSource(remoteSessionId, null);
     }
   };
 
@@ -283,28 +295,43 @@ const CameraMonitor = forwardRef<CameraMonitorHandle, Props>(({ onEventDetected,
       <div className="flex items-center justify-between z-10 relative">
         <div className="flex items-center gap-4">
            {remoteSessionId ? <Smartphone className="text-indigo-400" /> : <Scan className="text-blue-500 animate-pulse" />}
-           <h3 className="text-xl font-black uppercase tracking-tight">{remoteSessionId ? 'Remote Node Linked' : 'Bio-Signal Monitor'}</h3>
         </div>
         <div className="flex items-center gap-2">
-            {!isMonitoring && !remoteSessionId && (
+            {!sessionActive && (
                <div className="flex items-center gap-3">
                  <button onClick={startMonitoring} className="text-[10px] font-black uppercase text-blue-400 hover:text-white transition-colors flex items-center gap-1">
-                     <Camera size={14} /> Activate Local
+                     <Camera size={14} /> Sync (Start)
                  </button>
-                 <div className="h-3 w-px bg-white/10" />
-                 <button onClick={handleManualRemoteLink} className="text-[10px] font-black uppercase text-indigo-400 hover:text-white transition-colors">
-                     Link Mobile
-                 </button>
+                 {!remoteSessionId && (
+                     <>
+                        <div className="h-3 w-px bg-white/10" />
+                        <button onClick={handleManualRemoteLink} className="text-[10px] font-black uppercase text-indigo-400 hover:text-white transition-colors">
+                            Link Mobile
+                        </button>
+                     </>
+                 )}
                </div>
             )}
-            {isMonitoring && !remoteSessionId && (
-                <button onClick={stopMonitoring} className="text-[10px] font-black uppercase text-red-400 hover:text-white transition-colors flex items-center gap-1">
-                    <CameraOff size={14} /> Stop
-                </button>
+            {sessionActive && (
+                <div className="flex items-center gap-3">
+                    {activeSource === 'mobile' ? (
+                        <button onClick={() => handleSwitchSource('web')} className="px-3 py-1 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-full text-[10px] font-black uppercase transition-colors flex items-center gap-2 border border-blue-500/20">
+                            <Waves size={14} /> Switch to Webcam
+                        </button>
+                    ) : (
+                        <button onClick={() => handleSwitchSource('mobile')} className="px-3 py-1 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 rounded-full text-[10px] font-black uppercase transition-colors flex items-center gap-2 border border-indigo-500/20">
+                           <Smartphone size={14} /> Switch to Phone
+                        </button>
+                    )}
+                    
+                    <button onClick={stopMonitoring} className="text-[10px] font-black uppercase text-red-400 hover:text-white transition-colors flex items-center gap-1">
+                        <CameraOff size={14} /> Stop
+                    </button>
+                </div>
             )}
-            <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border flex items-center gap-2 ${isMonitoring ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-slate-800 text-slate-500 border-white/5'}`}>
-               <span className={`w-2 h-2 rounded-full ${isMonitoring ? 'bg-green-500 animate-pulse' : 'bg-slate-600'}`}></span>
-               {activeSource === 'mobile' ? 'Flow Synchronized' : (isMonitoring ? 'Live Feed' : 'Sensors Idle')}
+            <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border flex items-center gap-2 ${sessionActive ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-slate-800 text-slate-500 border-white/5'}`}>
+               <span className={`w-2 h-2 rounded-full ${sessionActive ? 'bg-green-500 animate-pulse' : 'bg-slate-600'}`}></span>
+               {activeSource === 'mobile' ? 'Phone Active' : (activeSource === 'web' ? 'Webcam Active' : 'Idle')}
             </div>
         </div>
       </div>
